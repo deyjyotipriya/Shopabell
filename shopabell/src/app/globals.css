@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Configuration for Tailwind CSS v4 can go here if needed, */
+  /* but for now, we rely on the defaults and tailwind.config.ts. */
+  /* The existing font and color variables from the default setup are removed */
+  /* as we're using utility classes and Inter font directly. */
+}
+
+/* Any additional global styles can be added below, */
+/* but generally, prefer utility classes. */
