@@ -99,6 +99,35 @@ export async function getSellerByStoreUrl(storeUrl: string) {
   return data
 }
 
+// Alias for getSellerByUserId for backward compatibility
+export async function getSeller(userId: string) {
+  return getSellerByUserId(userId)
+}
+
+export async function updateSeller(userId: string, updates: any) {
+  const { data, error } = await supabaseAdmin
+    .from('sellers')
+    .update(updates)
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateUser(userId: string, updates: any) {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
 // Product Management
 export async function createProduct(sellerId: string, productData: any) {
   const { data, error } = await supabaseAdmin

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AdminMetrics } from '@/app/components/admin/AdminMetrics';
+import PlatformOverview from '@/app/components/master/PlatformOverview';
 import { SystemHealth } from '@/app/components/admin/SystemHealth';
 import { FraudAlertComponent, FraudAlert } from '@/app/components/admin/FraudAlert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -10,15 +10,6 @@ import { Settings, Activity, Users, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MasterDashboard() {
-  const [systemMetrics, setSystemMetrics] = useState({
-    totalSellers: 0,
-    activeSellers: 0,
-    totalRevenue: 0,
-    totalCommission: 0,
-    totalOrders: 0,
-    conversionRate: 0,
-  });
-
   const [healthMetrics, setHealthMetrics] = useState({
     cpu: 0,
     memory: 0,
@@ -43,19 +34,16 @@ export default function MasterDashboard() {
 
   const fetchMasterData = async () => {
     try {
-      const [metricsRes, healthRes, fraudRes] = await Promise.all([
-        fetch('/api/master/metrics'),
+      const [healthRes, fraudRes] = await Promise.all([
         fetch('/api/master/health'),
         fetch('/api/master/fraud-alerts')
       ]);
 
-      const metricsData = await metricsRes.json();
       const healthData = await healthRes.json();
       const fraudData = await fraudRes.json();
 
-      setSystemMetrics(metricsData.metrics);
       setHealthMetrics(healthData);
-      setFraudAlerts(fraudData.alerts);
+      setFraudAlerts(fraudData.alerts || []);
     } catch (error) {
       console.error('Failed to fetch master data:', error);
     } finally {
@@ -134,7 +122,7 @@ export default function MasterDashboard() {
         </p>
       </div>
 
-      <AdminMetrics metrics={systemMetrics} />
+      <PlatformOverview />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {quickLinks.map((link) => (

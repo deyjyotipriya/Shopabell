@@ -8,7 +8,6 @@ import {
   BiPackage,
   BiVideo,
   BiChart,
-  BiMegaphone,
   BiStore,
   BiUser,
   BiCog,
@@ -16,6 +15,7 @@ import {
   BiMenu,
   BiX
 } from 'react-icons/bi';
+import { HiSpeakerphone } from 'react-icons/hi';
 
 interface NavItem {
   name: string;
@@ -28,7 +28,7 @@ const navigation: NavItem[] = [
   { name: 'Products', href: '/dashboard/products', icon: <BiPackage className="w-5 h-5" /> },
   { name: 'Livestreams', href: '/dashboard/livestreams', icon: <BiVideo className="w-5 h-5" /> },
   { name: 'Analytics', href: '/dashboard/analytics', icon: <BiChart className="w-5 h-5" /> },
-  { name: 'Campaigns', href: '/dashboard/campaigns', icon: <BiMegaphone className="w-5 h-5" /> },
+  { name: 'Campaigns', href: '/dashboard/campaigns', icon: <HiSpeakerphone className="w-5 h-5" /> },
   { name: 'Store', href: '/dashboard/store', icon: <BiStore className="w-5 h-5" /> },
 ];
 

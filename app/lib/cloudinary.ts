@@ -112,4 +112,12 @@ export async function importFromUrl(
   return uploadImage(url, options);
 }
 
+// Alias for importFromUrl for backward compatibility  
+export async function uploadFromUrl(
+  url: string,
+  options: UploadOptions = {}
+): Promise<string> {
+  return uploadImage(url, options);
+}
+
 export default cloudinary;

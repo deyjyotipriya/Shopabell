@@ -154,3 +154,19 @@ export const generateSessionToken = (): string => {
 export const generateCSRFToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
 };
+
+// Legacy function for backward compatibility
+export function verifyAuth(token: string): { userId: string; phone: string; role: string } | null {
+  try {
+    const decoded = jwt.verify(token);
+    if (!decoded) return null;
+    
+    return {
+      userId: decoded.userId,
+      phone: decoded.email, // Using email as phone for compatibility
+      role: decoded.role || 'seller'
+    };
+  } catch {
+    return null;
+  }
+}

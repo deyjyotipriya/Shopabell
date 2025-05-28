@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyOTP, createOrUpdateUser } from '@/app/lib/auth';
 import { 
-  verifyOTP, 
-  createOrUpdateUser, 
-  generateAccessToken, 
-  generateRefreshToken 
-} from '@/app/lib/auth';
+  generateTokens, 
+  setAuthCookies, 
+  updateLastLogin,
+  UserRole 
+} from '@/app/lib/auth-service';
+import { getSeller } from '@/app/lib/database';
 
 interface VerifyOTPRequest {
   phone: string;
   otp: string;
+  userType?: 'seller' | 'buyer';
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: VerifyOTPRequest = await request.json();
-    const { phone, otp } = body;
+    const { phone, otp, userType = 'buyer' } = body;
 
     // Validate input
     if (!phone || typeof phone !== 'string') {
@@ -42,17 +45,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update user
-    const user = await createOrUpdateUser(phone);
+    const user = await createOrUpdateUser(phone, userType);
+    
+    // Determine user role
+    let role: UserRole = 'buyer';
+    let isOnboarded = false;
+    
+    // Check if user is a seller
+    if (userType === 'seller' || user.type === 'seller') {
+      role = 'seller';
+      const seller = await getSeller(user.id);
+      isOnboarded = !!seller;
+    }
+    
+    // Check for admin/master roles (based on phone number for now)
+    if (phone === '+919999999999') {
+      role = 'master';
+    } else if (phone.endsWith('0000')) {
+      role = 'admin';
+    }
+
+    // Create auth user object
+    const authUser = {
+      id: user.id,
+      phone: user.phone,
+      name: user.name,
+      email: user.email,
+      role,
+      status: user.status,
+      permissions: [], // Will be populated by generateTokens
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
 
     // Generate tokens
-    const tokenPayload = {
-      userId: user.id,
-      phone: user.phone,
-      userType: user.type
-    };
+    const tokens = generateTokens(authUser);
     
-    const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken(tokenPayload);
+    // Set auth cookies
+    setAuthCookies(tokens);
+    
+    // Update last login
+    await updateLastLogin(user.id);
 
     // Return user data and tokens
     return NextResponse.json({
@@ -62,12 +95,15 @@ export async function POST(request: NextRequest) {
         phone: user.phone,
         name: user.name,
         email: user.email,
+        role,
+        isOnboarded,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
       tokens: {
-        accessToken,
-        refreshToken
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn
       }
     });
 

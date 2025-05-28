@@ -1,19 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/app/lib/auth';
+import { 
+  extractToken, 
+  verifyToken, 
+  clearAuthCookies, 
+  invalidateSession 
+} from '@/app/lib/auth-service';
 
 export async function POST(request: NextRequest) {
-  return withAuth(request, async (request, user) => {
-    // In a production environment, you would:
-    // 1. Invalidate the refresh token in your database
-    // 2. Add the access token to a blacklist (if using token blacklisting)
-    // 3. Clear any server-side sessions
+  try {
+    // Extract token
+    const token = extractToken(request);
     
-    // For now, we'll just return a success response
-    // The client should remove tokens from local storage
+    if (token) {
+      // Verify and get session info
+      const payload = verifyToken(token);
+      
+      if (payload && payload.sessionId) {
+        // Invalidate the session
+        invalidateSession(payload.sessionId);
+      }
+    }
+    
+    // Clear auth cookies
+    clearAuthCookies();
     
     return NextResponse.json({
       success: true,
       message: 'Logged out successfully'
     });
-  });
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Even if there's an error, clear cookies and return success
+    clearAuthCookies();
+    return NextResponse.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  }
 }

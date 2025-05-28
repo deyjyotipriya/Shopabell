@@ -8,6 +8,9 @@ export const formatPrice = (amount: number): string => {
   }).format(amount);
 };
 
+// Alias for formatPrice for backward compatibility
+export const formatCurrency = formatPrice;
+
 // Currency formatting utilities
 export const currency = {
   format: (

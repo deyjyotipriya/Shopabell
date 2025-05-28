@@ -1,4 +1,5 @@
-import { BiVideo, BiPackage, BiMegaphone, BiChart } from 'react-icons/bi';
+import { BiVideo, BiPackage, BiChart } from 'react-icons/bi';
+import { HiSpeakerphone } from 'react-icons/hi';
 
 interface QuickAction {
   title: string;
@@ -26,7 +27,7 @@ const actions: QuickAction[] = [
   {
     title: 'Create Campaign',
     description: 'Launch a marketing campaign',
-    icon: <BiMegaphone className="w-6 h-6" />,
+    icon: <HiSpeakerphone className="w-6 h-6" />,
     color: 'from-green-500 to-green-600',
     href: '/campaigns/new',
   },

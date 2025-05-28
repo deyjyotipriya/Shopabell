@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
-import { processScreenshot } from '@/app/lib/livestream-capture';
-import { uploadBase64 } from '@/app/lib/cloudinary';
+import { batchProcessLivestreamCaptures, generateProductMetadata } from '@/app/lib/ai-service';
+import { uploadImage } from '@/app/lib/cloudinary';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,10 +77,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process screenshot using AI
-    const detectedProducts = await processScreenshot(data.screenshot);
+    // Upload screenshot first
+    const screenshotUrl = await uploadImage(data.screenshot, {
+      folder: `livestream/${data.livestreamId}/captures`,
+      enhance: true
+    });
 
-    if (detectedProducts.length === 0) {
+    // Process screenshot using AI
+    const processedProducts = await batchProcessLivestreamCaptures(
+      [{ imageUrl: screenshotUrl, timestamp: parseInt(data.timestamp) }],
+      data.livestreamId
+    );
+
+    if (processedProducts.length === 0) {
       return NextResponse.json({
         captured: false,
         message: 'No products detected in screenshot'
@@ -90,28 +99,16 @@ export async function POST(request: NextRequest) {
     // Upload and create products
     const createdProducts = [];
     
-    for (const product of detectedProducts) {
+    for (const product of processedProducts) {
       // Only process high-confidence detections
-      if (product.confidence < 0.7) continue;
+      if (product.detection.confidence < 0.7) continue;
 
-      // Upload processed image to Cloudinary
-      const imageUrl = await uploadBase64(data.screenshot, {
-        folder: `livestream/${data.livestreamId}`,
-        public_id: `capture_${Date.now()}`,
-        transformation: [
-          { 
-            crop: 'crop',
-            x: product.boundingBox?.x || 0,
-            y: product.boundingBox?.y || 0,
-            width: product.boundingBox?.width || 800,
-            height: product.boundingBox?.height || 800
-          },
-          { background_removal: 'cloudinary_ai' },
-          { width: 1000, height: 1000, crop: 'pad', background: 'white' },
-          { quality: 'auto:best' },
-          { fetch_format: 'auto' }
-        ]
-      });
+      // Generate SEO metadata
+      const metadata = await generateProductMetadata(
+        product.detection.name || 'Product',
+        product.detection.category || 'Other',
+        product.detection.description
+      );
 
       // Check for similar products captured recently (deduplication)
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -120,23 +117,30 @@ export async function POST(request: NextRequest) {
         .select('id')
         .eq('seller_id', livestream.seller_id)
         .eq('source', 'livestream')
-        .ilike('name', `%${product.title.split(' ').slice(0, 3).join(' ')}%`)
+        .ilike('name', `%${product.detection.name?.split(' ').slice(0, 3).join(' ')}%`)
         .gte('created_at', fiveMinutesAgo)
         .single();
 
       if (similarProduct) {
         // Update existing product with new image
+        const { data: existingProduct } = await supabase
+          .from('products')
+          .select('images')
+          .eq('id', similarProduct.id)
+          .single();
+          
+        const existingImages = existingProduct?.images || [];
         await supabase
           .from('products')
           .update({
-            images: supabase.raw('array_append(images, ?)', [imageUrl])
+            images: [...existingImages, product.processedImageUrl]
           })
           .eq('id', similarProduct.id);
           
         createdProducts.push({ 
           id: similarProduct.id, 
           updated: true,
-          name: product.title 
+          name: product.detection.name 
         });
       } else {
         // Create new product
@@ -146,26 +150,32 @@ export async function POST(request: NextRequest) {
           .insert({
             id: productId,
             seller_id: livestream.seller_id,
-            name: product.title,
-            description: product.description || `Product showcased during livestream on ${new Date().toLocaleDateString()}`,
-            images: [imageUrl],
-            category: product.metadata?.category || 'Other',
-            price: product.price,
-            compare_at_price: product.price * 1.5, // 50% markup for comparison
+            name: product.detection.name || 'Product from livestream',
+            description: product.detection.description || `Product showcased during livestream on ${new Date().toLocaleDateString()}`,
+            images: [
+              product.processedImageUrl,
+              ...(product.variants?.map(v => v.imageUrl) || [])
+            ],
+            category: product.detection.category || 'Other',
+            price: product.detection.suggestedPrice || 0,
+            compare_at_price: (product.detection.suggestedPrice || 0) * 1.5, // 50% markup for comparison
             stock: 50, // Default stock for livestream products
             status: 'active',
             source: 'livestream',
             source_metadata: {
               livestream_id: data.livestreamId,
               capture_timestamp: data.timestamp,
-              confidence: product.confidence,
+              confidence: product.detection.confidence,
               platform: data.metadata?.platform,
-              ...product.metadata
+              detection: product.detection,
+              metadata
             },
             tags: [
               'livestream',
-              product.metadata?.category?.toLowerCase(),
-              data.metadata?.platform
+              product.detection.category?.toLowerCase(),
+              data.metadata?.platform,
+              ...(product.detection.tags || []),
+              ...(metadata.hashTags || [])
             ].filter(Boolean)
           });
 
@@ -173,8 +183,8 @@ export async function POST(request: NextRequest) {
           createdProducts.push({ 
             id: productId, 
             created: true,
-            name: product.title,
-            price: product.price
+            name: product.detection.name,
+            price: product.detection.suggestedPrice
           });
         }
       }
