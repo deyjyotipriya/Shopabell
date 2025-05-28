@@ -1,0 +1,176 @@
+
+> shopabell@0.1.0 build
+> next build
+
+   ▲ Next.js 14.0.4
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings
+
+./app/dashboard/layout.tsx
+Attempted import error: 'BiMegaphone' is not exported from '__barrel_optimize__?names=BiChart,BiCog,BiHome,BiLogOut,BiMegaphone,BiMenu,BiPackage,BiStore,BiUser,BiVideo!=!react-icons/bi' (imported as 'BiMegaphone').
+
+Import trace for requested module:
+./app/dashboard/layout.tsx
+
+./app/dashboard/layout.tsx
+Attempted import error: 'BiMegaphone' is not exported from '__barrel_optimize__?names=BiChart,BiCog,BiHome,BiLogOut,BiMegaphone,BiMenu,BiPackage,BiStore,BiUser,BiVideo!=!react-icons/bi' (imported as 'BiMegaphone').
+
+Import trace for requested module:
+./app/dashboard/layout.tsx
+
+./app/api/livestream/v2/capture/route.ts
+Attempted import error: 'uploadBase64' is not exported from '@/app/lib/cloudinary' (imported as 'uploadBase64').
+
+Import trace for requested module:
+./app/api/livestream/v2/capture/route.ts
+
+./app/api/products/import-ecommerce/route.ts
+Attempted import error: 'uploadFromUrl' is not exported from '@/app/lib/cloudinary' (imported as 'uploadFromUrl').
+
+Import trace for requested module:
+./app/api/products/import-ecommerce/route.ts
+
+./app/api/seller/analytics/sales-heatmap/customers/route.ts
+Attempted import error: 'verifyAuth' is not exported from '@/app/utils/auth' (imported as 'verifyAuth').
+
+Import trace for requested module:
+./app/api/seller/analytics/sales-heatmap/customers/route.ts
+
+./app/api/seller/analytics/sales-heatmap/inventory/route.ts
+Attempted import error: 'verifyAuth' is not exported from '@/app/utils/auth' (imported as 'verifyAuth').
+
+Import trace for requested module:
+./app/api/seller/analytics/sales-heatmap/inventory/route.ts
+
+./app/api/seller/analytics/sales-heatmap/livestreams/route.ts
+Attempted import error: 'verifyAuth' is not exported from '@/app/utils/auth' (imported as 'verifyAuth').
+
+Import trace for requested module:
+./app/api/seller/analytics/sales-heatmap/livestreams/route.ts
+
+./app/api/seller/analytics/sales-heatmap/orders/route.ts
+Attempted import error: 'verifyAuth' is not exported from '@/app/utils/auth' (imported as 'verifyAuth').
+
+Import trace for requested module:
+./app/api/seller/analytics/sales-heatmap/orders/route.ts
+
+./app/api/seller/analytics/sales-heatmap/revenue/route.ts
+Attempted import error: 'verifyAuth' is not exported from '@/app/utils/auth' (imported as 'verifyAuth').
+
+Import trace for requested module:
+./app/api/seller/analytics/sales-heatmap/revenue/route.ts
+
+./app/api/seller/analytics/sales-heatmap/route.ts
+Attempted import error: 'verifyAuth' is not exported from '@/app/utils/auth' (imported as 'verifyAuth').
+
+Import trace for requested module:
+./app/api/seller/analytics/sales-heatmap/route.ts
+
+./app/components/dashboard/QuickActions.tsx
+Attempted import error: 'BiMegaphone' is not exported from '__barrel_optimize__?names=BiChart,BiMegaphone,BiPackage,BiVideo!=!react-icons/bi' (imported as 'BiMegaphone').
+
+Import trace for requested module:
+./app/components/dashboard/QuickActions.tsx
+./app/dashboard/page.tsx
+
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./app/admin/earnings/page.tsx
+43:6  Warning: React Hook useEffect has a missing dependency: 'fetchEarningsData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/page.tsx
+27:6  Warning: React Hook useEffect has a missing dependency: 'fetchDashboardData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/sellers/page.tsx
+30:6  Warning: React Hook useEffect has a missing dependency: 'filterSellers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/chat/[chatId]/page.tsx
+21:6  Warning: React Hook useEffect has missing dependencies: 'fetchChatData' and 'fetchMessages'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/checkout/page.tsx
+37:6  Warning: React Hook useEffect has missing dependencies: 'fetchSession' and 'router'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/buyer/ChatInterface.tsx
+205:16  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+205:30  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./app/components/dashboard/CustomerInsights.tsx
+30:6  Warning: React Hook useEffect has a missing dependency: 'fetchCustomerData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/dashboard/LivestreamStats.tsx
+27:6  Warning: React Hook useEffect has a missing dependency: 'fetchLivestreamData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/dashboard/OrdersTable.tsx
+27:6  Warning: React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/dashboard/RevenueChart.tsx
+21:6  Warning: React Hook useEffect has a missing dependency: 'fetchRevenueData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/dashboard/SalesHeatmap.tsx
+32:6  Warning: React Hook useEffect has a missing dependency: 'fetchSalesData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/livestream/LivestreamStats.tsx
+48:6  Warning: React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/livestream/LivestreamWidget.tsx
+45:6  Warning: React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+59:6  Warning: React Hook useEffect has a missing dependency: 'handleCapture'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/components/products/ProductGrid.tsx
+72:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/components/ui/use-toast.tsx
+45:6  Warning: React Hook React.useCallback has a missing dependency: 'removeToast'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/dashboard/livestream/[id]/page.tsx
+49:6  Warning: React Hook useEffect has a missing dependency: 'fetchLivestreamDetails'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/dashboard/page.tsx
+14:47  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+14:54  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./app/dashboard/products/[id]/edit/page.tsx
+17:6  Warning: React Hook useEffect has a missing dependency: 'fetchProduct'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/master/analytics/page.tsx
+45:6  Warning: React Hook useEffect has a missing dependency: 'fetchAnalytics'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/master/users/page.tsx
+60:6  Warning: React Hook useEffect has a missing dependency: 'filterUsers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/orders/[orderId]/page.tsx
+18:6  Warning: React Hook useEffect has a missing dependency: 'fetchOrder'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/orders/[orderId]/success/page.tsx
+42:13  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./app/orders/page.tsx
+45:56  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./app/page.tsx
+110:113  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+206:59  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+206:68  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+487:17  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+488:56  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+506:17  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+507:51  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+525:17  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+525:62  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+525:67  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+526:54  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./app/store/[storeUrl]/page.tsx
+42:6  Warning: React Hook useEffect has missing dependencies: 'checkActiveLivestream' and 'fetchStoreData'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+46:6  Warning: React Hook useEffect has a missing dependency: 'applyFilters'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+143:58  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+143:79  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./app/store/[storeUrl]/product/[id]/page.tsx
+44:6  Warning: React Hook useEffect has a missing dependency: 'fetchProductData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
