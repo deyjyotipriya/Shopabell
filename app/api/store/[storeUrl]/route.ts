@@ -59,7 +59,7 @@ export async function GET(
       category: seller.category,
       rating: seller.rating,
       totalOrders: seller.total_orders,
-      phone: seller.users?.phone,
+      phone: (seller.users as any)?.phone,
       description: `Welcome to ${seller.business_name} - Your trusted ${seller.category} store on ShopAbell`,
       sellerId: seller.user_id
     };

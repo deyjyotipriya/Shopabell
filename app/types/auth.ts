@@ -28,6 +28,7 @@ export interface RefreshTokenRequest {
 export interface RefreshTokenResponse {
   success: boolean;
   tokens: AuthTokens;
+  user?: AuthUser;
 }
 
 export interface LogoutResponse {
@@ -40,6 +41,8 @@ export interface AuthUser {
   phone: string;
   name?: string;
   email?: string;
+  role?: 'buyer' | 'seller' | 'admin' | 'master';
+  isOnboarded?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

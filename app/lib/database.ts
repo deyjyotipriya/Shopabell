@@ -366,7 +366,7 @@ export async function getSellerAnalytics(sellerId: string) {
   if (productError) throw productError
 
   // Get customer count
-  const uniqueCustomers = new Set(orders?.map(order => order.buyer_id))
+  const uniqueCustomers = new Set(orders?.map((order: any) => order.buyer_id))
   const customerCount = uniqueCustomers.size
 
   return {

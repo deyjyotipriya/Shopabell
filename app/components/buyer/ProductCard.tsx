@@ -23,7 +23,7 @@ export default function ProductCard({ product, storeUrl }: ProductCardProps) {
     addToCart(product)
   }
 
-  const inStock = product.stock > 0
+  const inStock = (product.stock || 0) > 0
 
   return (
     <div
@@ -116,7 +116,7 @@ export default function ProductCard({ product, storeUrl }: ProductCardProps) {
         </div>
 
         {/* Stock indicator */}
-        {product.stock <= 5 && product.stock > 0 && (
+        {(product.stock || 0) <= 5 && (product.stock || 0) > 0 && (
           <p className="text-xs text-orange-600 mt-2">Only {product.stock} left!</p>
         )}
       </div>

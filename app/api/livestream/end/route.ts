@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Livestream ended successfully',
       summary,
-      autoPublished: products.length,
+      autoPublished: products?.length || 0,
     })
   } catch (error) {
     console.error('Failed to end livestream:', error)
@@ -127,9 +127,9 @@ async function generateLivestreamSummary(livestreamId: string) {
     : 0
 
   const products = livestream.livestream_products || []
-  const publishedProducts = products.filter(p => p.status === 'published').length
-  const pendingProducts = products.filter(p => p.status === 'pending').length
-  const rejectedProducts = products.filter(p => p.status === 'rejected').length
+  const publishedProducts = products.filter((p: any) => p.status === 'published').length
+  const pendingProducts = products.filter((p: any) => p.status === 'pending').length
+  const rejectedProducts = products.filter((p: any) => p.status === 'rejected').length
 
   return {
     duration: `${Math.floor(duration / 60)}h ${duration % 60}m`,
@@ -139,6 +139,6 @@ async function generateLivestreamSummary(livestreamId: string) {
     rejectedProducts,
     peakViewers: livestream.peak_viewers,
     totalSales: livestream.total_sales,
-    avgConfidence: products.reduce((sum, p) => sum + p.confidence, 0) / products.length || 0,
+    avgConfidence: products.reduce((sum: number, p: any) => sum + p.confidence, 0) / products.length || 0,
   }
 }

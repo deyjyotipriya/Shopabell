@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { Card } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react'
 import LivestreamCapture from './LivestreamCapture'
+import { ProcessedImage } from '@/app/lib/client-image-processor'
 
 interface LivestreamWidgetProps {
   livestreamId: string
@@ -29,9 +30,10 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
   const [isMinimized, setIsMinimized] = useState(false)
   const [productCount, setProductCount] = useState(0)
   const [viewerCount, setViewerCount] = useState(0)
-  const [captureInterval, setCaptureInterval] = useState(5000) // 5 seconds default
+  const [captureInterval, setCaptureInterval] = useState(5) // 5 seconds default
   const [lastCaptureTime, setLastCaptureTime] = useState<Date | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([])
   const captureRef = useRef<any>(null)
 
   useEffect(() => {
@@ -45,18 +47,18 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
   }, [livestreamId])
 
   useEffect(() => {
-    let captureTimer: NodeJS.Timeout
-
     if (isCapturing && !isMinimized) {
-      captureTimer = setInterval(() => {
-        handleCapture()
-      }, captureInterval)
+      // Start auto-capture with client-side processing
+      captureRef.current?.startAutoCapture(livestreamId, captureInterval)
+    } else {
+      // Stop auto-capture
+      captureRef.current?.stopAutoCapture()
     }
 
     return () => {
-      if (captureTimer) clearInterval(captureTimer)
+      captureRef.current?.stopAutoCapture()
     }
-  }, [isCapturing, isMinimized, captureInterval])
+  }, [isCapturing, isMinimized, captureInterval, livestreamId])
 
   const fetchStats = async () => {
     try {
@@ -71,27 +73,28 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
     }
   }
 
-  const handleCapture = async () => {
-    if (isProcessing) return
+  const handleImageProcessed = useCallback(async (image: ProcessedImage, timestamp: number) => {
+    setLastCaptureTime(new Date(timestamp))
+    setProcessedImages(prev => [...prev, image])
     
-    setIsProcessing(true)
-    setLastCaptureTime(new Date())
-
-    try {
-      // Trigger screenshot capture
-      const screenshot = await captureRef.current?.captureScreenshot()
+    // Only send to server if product detected with high confidence
+    if (image.detection?.isProduct && image.detection.confidence > 0.7) {
+      setIsProcessing(true)
       
-      if (screenshot) {
-        // Send to API for processing
-        const response = await fetch('/api/livestream/capture', {
+      try {
+        // Send pre-processed image to API v2
+        const response = await fetch('/api/livestream/v2/capture', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             livestreamId,
-            screenshot,
-            timestamp: new Date().toISOString()
+            processedImage: image.processedImage,
+            thumbnail: image.thumbnail,
+            detection: image.detection,
+            metadata: image.metadata,
+            timestamp: new Date(timestamp).toISOString()
           }),
         })
 
@@ -100,18 +103,18 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
           if (data.productsDetected > 0) {
             setProductCount(prev => prev + data.productsDetected)
             toast({
-              title: 'Products detected',
-              description: `${data.productsDetected} new product(s) captured`,
+              title: 'Product added to catalog',
+              description: `${image.detection.category || 'Product'} detected with ${Math.round(image.detection.confidence * 100)}% confidence`,
             })
           }
         }
+      } catch (error) {
+        console.error('Failed to save product:', error)
+      } finally {
+        setIsProcessing(false)
       }
-    } catch (error) {
-      console.error('Capture failed:', error)
-    } finally {
-      setIsProcessing(false)
     }
-  }
+  }, [livestreamId])
 
   const toggleCapture = () => {
     setIsCapturing(!isCapturing)
@@ -124,7 +127,7 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
   }
 
   const handleSettingsChange = (interval: number) => {
-    setCaptureInterval(interval * 1000)
+    setCaptureInterval(interval)
     toast({
       title: 'Settings updated',
       description: `Capture interval set to ${interval} seconds`,
@@ -218,7 +221,7 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
               {isCapturing ? (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span>Capturing every {captureInterval / 1000}s</span>
+                  <span>Capturing every {captureInterval}s</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -259,9 +262,15 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
               variant="outline" 
               size="icon"
               onClick={() => {
-                const interval = prompt('Set capture interval (seconds):', String(captureInterval / 1000))
-                if (interval && !isNaN(Number(interval))) {
+                const interval = prompt('Set capture interval (seconds):', String(captureInterval))
+                if (interval && !isNaN(Number(interval)) && Number(interval) >= 3) {
                   handleSettingsChange(Number(interval))
+                } else if (interval && Number(interval) < 3) {
+                  toast({
+                    title: 'Invalid interval',
+                    description: 'Minimum capture interval is 3 seconds',
+                    variant: 'destructive'
+                  })
                 }
               }}
             >
@@ -271,7 +280,10 @@ export default function LivestreamWidget({ livestreamId, onClose }: LivestreamWi
         </div>
 
         {/* Hidden capture component */}
-        <LivestreamCapture ref={captureRef} />
+        <LivestreamCapture 
+          ref={captureRef} 
+          onImageProcessed={handleImageProcessed}
+        />
       </Card>
     </div>
   )

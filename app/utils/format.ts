@@ -58,10 +58,10 @@ export const date = {
     const dateObj = new Date(date);
     
     const options: Intl.DateTimeFormatOptions = {
-      short: { day: 'numeric', month: 'numeric', year: '2-digit' },
-      medium: { day: 'numeric', month: 'short', year: 'numeric' },
-      long: { day: 'numeric', month: 'long', year: 'numeric' },
-      full: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+      short: { day: 'numeric', month: 'numeric', year: '2-digit' } as Intl.DateTimeFormatOptions,
+      medium: { day: 'numeric', month: 'short', year: 'numeric' } as Intl.DateTimeFormatOptions,
+      long: { day: 'numeric', month: 'long', year: 'numeric' } as Intl.DateTimeFormatOptions,
+      full: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } as Intl.DateTimeFormatOptions
     }[format];
 
     return new Intl.DateTimeFormat(locale, options).format(dateObj);
@@ -89,8 +89,9 @@ export const date = {
     includeSeconds: boolean = false,
     locale: string = 'en-IN'
   ): string => {
-    const dateStr = date.format(date, dateFormat, locale);
-    const timeStr = date.formatTime(date, includeSeconds, locale);
+    const dateObj = new Date(date);
+    const dateStr = exports.date.format(dateObj, dateFormat, locale);
+    const timeStr = exports.date.formatTime(dateObj, includeSeconds, locale);
     return `${dateStr} at ${timeStr}`;
   },
 

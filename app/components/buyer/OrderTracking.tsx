@@ -82,7 +82,7 @@ export default function OrderTracking({ order }: OrderTrackingProps) {
               {item.image && (
                 <Image
                   src={item.image}
-                  alt={item.name}
+                  alt={item.name || 'Product'}
                   width={50}
                   height={50}
                   className="rounded-lg object-cover"
@@ -102,7 +102,7 @@ export default function OrderTracking({ order }: OrderTrackingProps) {
         <div className="mt-4 pt-4 border-t flex justify-between">
           <span className="font-medium text-gray-900">Total</span>
           <span className="font-semibold text-gray-900">
-            ${order.total.toFixed(2)}
+            ${(order.total || 0).toFixed(2)}
           </span>
         </div>
       </div>

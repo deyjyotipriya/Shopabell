@@ -386,7 +386,7 @@ function getPeakSeason(data: any[]): string {
   }, {} as Record<string, number>);
   
   const peakMonth = Object.entries(monthlyTotals)
-    .sort(([, a], [, b]) => b - a)[0]?.[0];
+    .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0];
     
   return peakMonth || 'Unknown';
 }
@@ -472,10 +472,13 @@ function getPerformanceByPlatform(livestreams: any[]) {
     return acc;
   }, {} as Record<string, any>);
   
-  return Object.entries(platforms).map(([platform, data]) => ({
-    platform,
-    ...data,
-    avgViewers: data.count > 0 ? data.viewers / data.count : 0,
-    avgGmv: data.count > 0 ? data.gmv / data.count : 0,
-  }));
+  return Object.entries(platforms).map(([platform, data]) => {
+    const platformData = data as any;
+    return {
+      platform,
+      ...platformData,
+      avgViewers: platformData.count > 0 ? platformData.viewers / platformData.count : 0,
+      avgGmv: platformData.count > 0 ? platformData.gmv / platformData.count : 0,
+    };
+  });
 }

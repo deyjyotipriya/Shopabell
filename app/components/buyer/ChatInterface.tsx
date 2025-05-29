@@ -47,10 +47,10 @@ export default function ChatInterface({ chat, messages, onSendMessage }: ChatInt
       {/* Header */}
       <div className="bg-white shadow px-4 py-3">
         <div className="flex items-center space-x-3">
-          {chat.store.logo ? (
+          {chat.store?.logo ? (
             <Image
               src={chat.store.logo}
-              alt={chat.store.name}
+              alt={chat.store.name || 'Store'}
               width={40}
               height={40}
               className="rounded-full"
@@ -58,12 +58,12 @@ export default function ChatInterface({ chat, messages, onSendMessage }: ChatInt
           ) : (
             <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
               <span className="text-white font-bold">
-                {chat.store.name.charAt(0).toUpperCase()}
+                {chat.store?.name?.charAt(0)?.toUpperCase() || 'S'}
               </span>
             </div>
           )}
           <div className="flex-1">
-            <h2 className="font-semibold text-gray-900">{chat.store.name}</h2>
+            <h2 className="font-semibold text-gray-900">{chat.store?.name || 'Store'}</h2>
             <p className="text-sm text-gray-500">Active now</p>
           </div>
           {chat.product && (

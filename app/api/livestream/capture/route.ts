@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/app/lib/auth'
 import { createClient } from '@supabase/supabase-js'
-import { processLivestreamCapture, generateProductMetadata } from '@/app/lib/ai-service'
-import { uploadImage } from '@/app/lib/cloudinary'
+import { generateProductMetadata } from '@/app/lib/ai-service'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +16,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { livestreamId, screenshot, timestamp } = body
+    const { 
+      livestreamId, 
+      screenshot, // Legacy field for backward compatibility
+      processedImage, // New: pre-processed image from client
+      thumbnail, // New: thumbnail from client
+      detection, // New: product detection results from client
+      metadata, // New: image metadata from client
+      timestamp 
+    } = body
 
     // Verify livestream exists and belongs to user
     const { data: livestream } = await supabase
@@ -35,56 +42,60 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upload screenshot to Cloudinary first
-    const uploadedImageUrl = await uploadImage(screenshot, {
-      folder: `livestreams/${livestreamId}`,
-      enhance: true
-    })
-
-    // Process the screenshot with AI
-    const processedProduct = await processLivestreamCapture(
-      uploadedImageUrl,
-      timestamp,
-      livestreamId
-    )
-
-    if (!processedProduct) {
-      return NextResponse.json({
-        productsDetected: 0,
-        products: [],
-        message: 'No product detected in this capture'
-      })
+    // Check if we have pre-processed data from client
+    if (processedImage && detection) {
+      // Client-side processing path - no product detected
+      if (!detection.isProduct || detection.confidence < 0.7) {
+        return NextResponse.json({
+          productsDetected: 0,
+          products: [],
+          message: 'No product detected in this capture'
+        })
+      }
+    } else if (screenshot) {
+      // Legacy server-side processing path
+      // This should be removed once all clients are updated
+      return NextResponse.json(
+        { error: 'Server-side processing is no longer supported. Please update your client.' },
+        { status: 400 }
+      )
+    } else {
+      return NextResponse.json(
+        { error: 'Missing required image data' },
+        { status: 400 }
+      )
     }
 
-    // Generate metadata for SEO
-    const metadata = await generateProductMetadata(
-      processedProduct.detection.name || 'Product',
-      processedProduct.detection.category || 'Other',
-      processedProduct.detection.description
+    // Generate SEO metadata
+    const seoMetadata = await generateProductMetadata(
+      detection.name || `Product from livestream`,
+      detection.category || 'Other',
+      detection.description
     )
 
-    // Create product entry
+    // Create product entry with client-processed data
     const productToInsert = {
       seller_id: user.id,
-      name: processedProduct.detection.name || `Product from livestream`,
-      description: processedProduct.detection.description || '',
+      name: detection.name || `Product from livestream`,
+      description: detection.description || '',
       images: JSON.stringify([
-        processedProduct.processedImageUrl,
-        ...(processedProduct.variants?.map(v => v.imageUrl) || [])
+        processedImage, // Already processed and optimized
+        thumbnail // Include thumbnail
       ]),
-      category: processedProduct.detection.category,
-      price: processedProduct.detection.suggestedPrice || 0,
+      category: detection.category || 'Other',
+      price: detection.suggestedPrice || 0,
       stock: 1,
       status: 'active',
       source: 'livestream',
       source_metadata: JSON.stringify({
         livestreamId,
         timestamp,
-        originalImage: processedProduct.originalImageUrl,
-        detection: processedProduct.detection,
-        metadata
+        detection,
+        imageMetadata: metadata,
+        seoMetadata,
+        processingType: 'client-side'
       }),
-      tags: [...(processedProduct.detection.tags || []), ...(metadata.hashTags || [])]
+      tags: [...(detection.tags || []), ...(seoMetadata.hashTags || [])]
     }
 
     const { data: createdProduct, error: insertError } = await supabase
@@ -118,8 +129,9 @@ export async function POST(request: NextRequest) {
         price: createdProduct.price,
         images: JSON.parse(createdProduct.images),
         category: createdProduct.category,
-        confidence: processedProduct.detection.confidence,
-        aiDetection: processedProduct.detection
+        confidence: detection.confidence,
+        aiDetection: detection,
+        processingType: 'client-side'
       },
     })
   } catch (error) {

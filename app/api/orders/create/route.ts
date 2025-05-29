@@ -36,6 +36,10 @@ interface CreateOrderRequest {
   shippingAddress: ShippingAddress;
   billingAddress?: ShippingAddress;
   paymentMethod: 'upi' | 'bank_transfer' | 'card' | 'cod';
+  shippingCharge?: number;
+  codCharge?: number;
+  shippingZone?: string;
+  estimatedDelivery?: number;
   couponCode?: string;
   notes?: string;
 }
@@ -54,10 +58,9 @@ function generateOrderNumber(): string {
 function calculateOrderTotals(
   items: OrderItem[],
   shippingCharge: number = 70,
-  isCOD: boolean = false
+  codCharge: number = 0
 ) {
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const codCharge = isCOD ? Math.round(subtotal * 0.02) : 0; // 2% COD charge
   const platformFee = Math.round(subtotal * 0.03); // 3% platform fee
   const total = subtotal + shippingCharge + codCharge;
   
@@ -96,11 +99,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate totals
+    // Calculate totals with pincode-based shipping
     const totals = calculateOrderTotals(
       data.items,
-      parseInt(process.env.DEFAULT_SHIPPING_CHARGE || '70'),
-      data.paymentMethod === 'cod'
+      data.shippingCharge || parseInt(process.env.DEFAULT_SHIPPING_CHARGE || '70'),
+      data.codCharge || 0
     );
 
     // Create order
@@ -282,7 +285,8 @@ export async function POST(request: NextRequest) {
           qrCode: paymentLink.qrCode,
           expiresAt: paymentLink.expiresAt
         } : null,
-        estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days
+        estimatedDelivery: new Date(Date.now() + (data.estimatedDelivery || 5) * 24 * 60 * 60 * 1000).toISOString(),
+        shippingZone: data.shippingZone
       }
     });
   } catch (error) {

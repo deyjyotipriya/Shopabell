@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadFromUrl } from '@/app/lib/cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -147,14 +147,15 @@ export async function POST(request: NextRequest) {
     const uploadedImages = await Promise.all(
       parsedProduct.images.map(async (imageUrl) => {
         try {
-          return await uploadFromUrl(imageUrl, {
+          const result = await cloudinary.uploader.upload(imageUrl, {
             folder: `products/${sellerId}`,
-            transformation: [
-              { width: 1000, height: 1000, crop: 'limit' },
-              { quality: 'auto:best' },
-              { fetch_format: 'auto' }
-            ]
+            width: 1000,
+            height: 1000,
+            crop: 'limit',
+            quality: 'auto:best',
+            fetch_format: 'auto'
           });
+          return result.secure_url;
         } catch (error) {
           console.error('Image upload error:', error);
           return imageUrl; // Fallback to original URL

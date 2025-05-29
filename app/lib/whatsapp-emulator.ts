@@ -232,8 +232,8 @@ export class WhatsAppEmulator {
         break;
 
       case 'category':
-        if (CATEGORIES[trimmedMessage]) {
-          state.category = CATEGORIES[trimmedMessage];
+        if (CATEGORIES[trimmedMessage as keyof typeof CATEGORIES]) {
+          state.category = CATEGORIES[trimmedMessage as keyof typeof CATEGORIES];
           state.stage = 'upi_id';
           await this.sendAutomatedResponse(phoneNumber, 'upi_prompt', state.language || 'en');
         } else {
@@ -261,25 +261,29 @@ export class WhatsAppEmulator {
             text: { body: successMessage }
           });
           
-          // Create seller account webhook
+          // Create seller account webhook - send as custom payload
           if (this.webhookUrl) {
-            await this.sendWebhook({
-              object: 'seller_account',
-              entry: [{
-                id: state.sellerId,
-                changes: [{
-                  value: {
-                    seller_id: state.sellerId,
-                    phone_number: phoneNumber,
-                    business_name: state.businessName,
-                    category: state.category,
-                    upi_id: state.upiId,
-                    language: state.language,
-                    created_at: new Date().toISOString()
-                  },
-                  field: 'account_created'
+            await fetch(this.webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                object: 'seller_account',
+                entry: [{
+                  id: state.sellerId,
+                  changes: [{
+                    value: {
+                      seller_id: state.sellerId,
+                      phone_number: phoneNumber,
+                      business_name: state.businessName,
+                      category: state.category,
+                      upi_id: state.upiId,
+                      language: state.language,
+                      created_at: new Date().toISOString()
+                    },
+                    field: 'account_created'
+                  }]
                 }]
-              }]
+              })
             });
           }
         } else {
@@ -295,7 +299,8 @@ export class WhatsAppEmulator {
   private async sendAutomatedResponse(phoneNumber: string, messageKey: string, language: 'en' | 'hi' | 'bn') {
     await this.simulateDelay();
     
-    const message = TRANSLATIONS[language][messageKey];
+    const translations = TRANSLATIONS[language];
+    const message = translations[messageKey as keyof typeof translations];
     if (message) {
       await this.sendMessage({
         from: '15550555555',

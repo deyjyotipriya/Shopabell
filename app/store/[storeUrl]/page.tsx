@@ -55,7 +55,7 @@ export default function StorePage() {
         
         // Extract unique categories
         const uniqueCategories = [...new Set(data.products.map((p: Product) => p.category))]
-        setCategories(uniqueCategories.filter(Boolean))
+        setCategories(uniqueCategories.filter(Boolean) as string[])
       }
     } catch (error) {
       console.error('Error fetching store:', error)
@@ -85,7 +85,7 @@ export default function StorePage() {
     if (searchTerm) {
       filtered = filtered.filter(product => 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (product.description || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -111,7 +111,7 @@ export default function StorePage() {
         filtered.sort((a, b) => b.price - a.price)
         break
       case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        filtered.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
         break
       case 'popular':
         // Sort by some popularity metric (e.g., views, sales)

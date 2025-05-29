@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { CheckoutSession } from '@/app/types'
+import { ShippingCalculation } from '@/lib/shipping-calculator'
 
 interface CheckoutFormProps {
   session: CheckoutSession
@@ -16,25 +17,92 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
     city: '',
     state: '',
     zipCode: '',
+    paymentMethod: 'card',
     cardNumber: '',
     expiryDate: '',
     cvv: '',
     saveInfo: false
   })
   const [processing, setProcessing] = useState(false)
+  const [shippingInfo, setShippingInfo] = useState<ShippingCalculation | null>(null)
+  const [checkingPincode, setCheckingPincode] = useState(false)
+  const [pincodeError, setPincodeError] = useState('')
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
   }
 
+  // Calculate shipping when pincode or payment method changes
+  useEffect(() => {
+    const calculateShipping = async () => {
+      if (formData.zipCode.length === 6 && /^\d{6}$/.test(formData.zipCode)) {
+        setCheckingPincode(true)
+        setPincodeError('')
+        
+        try {
+          // Calculate total weight (assuming 0.5kg per item if not specified)
+          const totalWeight = session.items.reduce((sum, item) => {
+            const weight = (item as any).weight || 0.5
+            return sum + (weight * item.quantity)
+          }, 0)
+          
+          const response = await fetch('/api/shipping/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pincode: formData.zipCode,
+              weight: totalWeight,
+              orderValue: session.subtotal,
+              paymentMethod: formData.paymentMethod
+            })
+          })
+          
+          const data = await response.json()
+          
+          if (data.success) {
+            setShippingInfo(data.data)
+            setPincodeError('')
+          } else {
+            setPincodeError(data.error || 'Invalid pincode')
+            setShippingInfo(null)
+          }
+        } catch (error) {
+          console.error('Error calculating shipping:', error)
+          setPincodeError('Failed to calculate shipping')
+        } finally {
+          setCheckingPincode(false)
+        }
+      } else if (formData.zipCode.length > 0) {
+        setPincodeError('Please enter a valid 6-digit pincode')
+        setShippingInfo(null)
+      }
+    }
+    
+    const debounceTimer = setTimeout(calculateShipping, 500)
+    return () => clearTimeout(debounceTimer)
+  }, [formData.zipCode, formData.paymentMethod, session])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!shippingInfo) {
+      setPincodeError('Please enter a valid pincode for delivery')
+      return
+    }
+    
     setProcessing(true)
-    await onSubmit(formData)
+    await onSubmit({
+      ...formData,
+      shippingCharge: shippingInfo.finalCharge,
+      shippingZone: shippingInfo.zone,
+      estimatedDelivery: shippingInfo.estimatedDays,
+      codCharge: shippingInfo.codCharge
+    })
     setProcessing(false)
   }
 
@@ -75,7 +143,7 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
               {item.image && (
                 <Image
                   src={item.image}
-                  alt={item.name}
+                  alt={item.name || 'Product'}
                   width={60}
                   height={60}
                   className="rounded-lg object-cover"
@@ -95,19 +163,54 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
         <div className="mt-6 pt-6 border-t space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Subtotal</span>
-            <span className="text-gray-900">${session.subtotal.toFixed(2)}</span>
+            <span className="text-gray-900">₹{session.subtotal.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Shipping</span>
-            <span className="text-gray-900">${session.shipping.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tax</span>
-            <span className="text-gray-900">${session.tax.toFixed(2)}</span>
-          </div>
+          
+          {/* Shipping calculation */}
+          {shippingInfo ? (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Base Shipping</span>
+                <span className="text-gray-900">₹{shippingInfo.baseCharge.toFixed(2)}</span>
+              </div>
+              {shippingInfo.weightCharge > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Weight Charge</span>
+                  <span className="text-gray-900">₹{shippingInfo.weightCharge.toFixed(2)}</span>
+                </div>
+              )}
+              {shippingInfo.codCharge > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">COD Charge</span>
+                  <span className="text-gray-900">₹{shippingInfo.codCharge.toFixed(2)}</span>
+                </div>
+              )}
+              {shippingInfo.discount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Free Shipping Discount</span>
+                  <span>-₹{shippingInfo.discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-medium">
+                <span className="text-gray-900">Total Shipping</span>
+                <span className="text-gray-900">₹{shippingInfo.finalCharge.toFixed(2)}</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                {shippingInfo.zone} • Est. delivery in {shippingInfo.estimatedDays} days
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Shipping</span>
+              <span className="text-gray-400">
+                {checkingPincode ? 'Calculating...' : 'Enter pincode'}
+              </span>
+            </div>
+          )}
+          
           <div className="flex justify-between text-lg font-semibold pt-2 border-t">
             <span>Total</span>
-            <span>${session.total.toFixed(2)}</span>
+            <span>₹{(session.subtotal + (shippingInfo?.finalCharge || 0)).toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -217,7 +320,7 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
             
             <div>
               <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
-                ZIP Code
+                PIN Code
               </label>
               <input
                 type="text"
@@ -225,19 +328,86 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
                 name="zipCode"
                 value={formData.zipCode}
                 onChange={handleChange}
+                placeholder="e.g. 400001"
+                maxLength={6}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                  pincodeError ? 'border-red-300' : 'border-gray-300'
+                }`}
               />
+              {pincodeError && (
+                <p className="mt-1 text-sm text-red-600">{pincodeError}</p>
+              )}
+              {shippingInfo && (
+                <p className="mt-1 text-sm text-green-600">
+                  ✓ Delivery available to {shippingInfo.zone}
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Payment Information */}
+      {/* Payment Method Selection */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Information</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Method</h2>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="card"
+              checked={formData.paymentMethod === 'card'}
+              onChange={handleChange}
+              className="mr-3"
+            />
+            <div>
+              <div className="font-medium">Credit/Debit Card</div>
+              <div className="text-sm text-gray-500">Pay securely with your card</div>
+            </div>
+          </label>
+          
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="upi"
+              checked={formData.paymentMethod === 'upi'}
+              onChange={handleChange}
+              className="mr-3"
+            />
+            <div>
+              <div className="font-medium">UPI</div>
+              <div className="text-sm text-gray-500">Pay using any UPI app</div>
+            </div>
+          </label>
+          
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="cod"
+              checked={formData.paymentMethod === 'cod'}
+              onChange={handleChange}
+              className="mr-3"
+            />
+            <div>
+              <div className="font-medium">Cash on Delivery</div>
+              <div className="text-sm text-gray-500">
+                Pay when you receive {shippingInfo?.codCharge ? `(+₹${shippingInfo.codCharge} COD charge)` : ''}
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Payment Information */}
+      {formData.paymentMethod === 'card' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Card Information</h2>
+          
+          <div className="space-y-4">
           <div>
             <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 mb-1">
               Card Number
@@ -307,6 +477,7 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
           </label>
         </div>
       </div>
+      )}
 
       {/* Submit Button */}
       <div className="flex justify-end">
@@ -315,7 +486,7 @@ export default function CheckoutForm({ session, onSubmit }: CheckoutFormProps) {
           disabled={processing}
           className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {processing ? 'Processing...' : `Complete Order - $${session.total.toFixed(2)}`}
+          {processing ? 'Processing...' : `Complete Order - ₹${(session.subtotal + (shippingInfo?.finalCharge || 0)).toFixed(2)}`}
         </button>
       </div>
     </form>

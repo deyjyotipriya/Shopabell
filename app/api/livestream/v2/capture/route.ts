@@ -1,254 +1,259 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
-import { batchProcessLivestreamCaptures, generateProductMetadata } from '@/app/lib/ai-service';
-import { uploadImage } from '@/app/lib/cloudinary';
+import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentUser } from '@/app/lib/auth'
+import { createClient } from '@supabase/supabase-js'
+import { generateProductMetadata } from '@/app/lib/ai-service'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+)
 
-interface CaptureRequest {
-  livestreamId: string;
-  screenshot: string; // base64 encoded image
-  timestamp: string;
-  metadata?: {
-    platform?: string;
-    viewerCount?: number;
-  };
-}
-
-// Verify widget token
-async function verifyWidgetToken(token: string): Promise<any | null> {
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    return decoded;
-  } catch (error) {
-    return null;
+interface ClientProcessedImage {
+  processedImage: string // Base64 WebP/JPEG, <100KB
+  thumbnail: string // Base64 thumbnail
+  detection: {
+    isProduct: boolean
+    confidence: number
+    category?: string
+    name?: string
+    description?: string
+    suggestedPrice?: number
+    tags?: string[]
+    boundingBox?: {
+      x: number
+      y: number
+      width: number
+      height: number
+    }
+  }
+  metadata: {
+    width: number
+    height: number
+    size: number
+    format: string
+    timestamp: number
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Get token from header or query
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') 
-      ? authHeader.substring(7) 
-      : request.nextUrl.searchParams.get('token');
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token required' },
-        { status: 401 }
-      );
+    const user = await getCurrentUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const tokenData = await verifyWidgetToken(token);
-    if (!tokenData) {
+    const body = await request.json()
+    const { 
+      livestreamId, 
+      processedImage,
+      thumbnail,
+      detection,
+      metadata,
+      timestamp 
+    } = body as {
+      livestreamId: string
+      timestamp: string
+    } & ClientProcessedImage
+
+    // Validate required fields
+    if (!livestreamId || !processedImage || !detection) {
       return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
     }
 
-    const data: CaptureRequest = await request.json();
-
-    // Validate livestream
-    if (data.livestreamId !== tokenData.livestreamId) {
-      return NextResponse.json(
-        { error: 'Livestream ID mismatch' },
-        { status: 403 }
-      );
-    }
-
-    // Check if livestream is active
+    // Verify livestream exists and belongs to user
     const { data: livestream } = await supabase
       .from('livestreams')
-      .select('id, status, seller_id')
-      .eq('id', data.livestreamId)
-      .single();
+      .select('*')
+      .eq('id', livestreamId)
+      .eq('user_id', user.id)
+      .eq('status', 'live')
+      .single()
 
-    if (!livestream || livestream.status !== 'live') {
+    if (!livestream) {
       return NextResponse.json(
-        { error: 'Livestream not active' },
-        { status: 400 }
-      );
+        { error: 'Livestream not found or not active' },
+        { status: 404 }
+      )
     }
 
-    // Upload screenshot first
-    const screenshotUrl = await uploadImage(data.screenshot, {
-      folder: `livestream/${data.livestreamId}/captures`,
-      enhance: true
-    });
-
-    // Process screenshot using AI
-    const processedProducts = await batchProcessLivestreamCaptures(
-      [{ imageUrl: screenshotUrl, timestamp: parseInt(data.timestamp) }],
-      data.livestreamId
-    );
-
-    if (processedProducts.length === 0) {
+    // Skip if no product detected or low confidence
+    if (!detection.isProduct || detection.confidence < 0.7) {
       return NextResponse.json({
-        captured: false,
-        message: 'No products detected in screenshot'
-      });
+        productsDetected: 0,
+        products: [],
+        message: 'No product detected with sufficient confidence',
+        confidence: detection.confidence
+      })
     }
 
-    // Upload and create products
-    const createdProducts = [];
-    
-    for (const product of processedProducts) {
-      // Only process high-confidence detections
-      if (product.detection.confidence < 0.7) continue;
+    // Validate image size (should be <100KB)
+    if (metadata.size > 100 * 1024) {
+      return NextResponse.json(
+        { error: 'Processed image too large. Must be under 100KB' },
+        { status: 400 }
+      )
+    }
 
-      // Generate SEO metadata
-      const metadata = await generateProductMetadata(
-        product.detection.name || 'Product',
-        product.detection.category || 'Other',
-        product.detection.description
-      );
+    // Generate SEO metadata
+    const seoMetadata = await generateProductMetadata(
+      detection.name || `Product from livestream`,
+      detection.category || 'Other',
+      detection.description
+    )
 
-      // Check for similar products captured recently (deduplication)
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { data: similarProduct } = await supabase
-        .from('products')
-        .select('id')
-        .eq('seller_id', livestream.seller_id)
-        .eq('source', 'livestream')
-        .ilike('name', `%${product.detection.name?.split(' ').slice(0, 3).join(' ')}%`)
-        .gte('created_at', fiveMinutesAgo)
-        .single();
+    // Create product entry with client-processed data
+    const productToInsert = {
+      seller_id: user.id,
+      name: detection.name || `Product ${Date.now()}`,
+      description: detection.description || '',
+      images: JSON.stringify([processedImage, thumbnail]),
+      category: detection.category || 'Other',
+      price: detection.suggestedPrice || 0,
+      stock: 1,
+      status: 'active',
+      source: 'livestream',
+      source_metadata: JSON.stringify({
+        livestreamId,
+        timestamp,
+        detection,
+        imageMetadata: metadata,
+        seoMetadata,
+        processingType: 'client-side-v2'
+      }),
+      tags: [...(detection.tags || []), ...(seoMetadata.hashTags || [])]
+    }
 
-      if (similarProduct) {
-        // Update existing product with new image
-        const { data: existingProduct } = await supabase
-          .from('products')
-          .select('images')
-          .eq('id', similarProduct.id)
-          .single();
-          
-        const existingImages = existingProduct?.images || [];
-        await supabase
-          .from('products')
-          .update({
-            images: [...existingImages, product.processedImageUrl]
-          })
-          .eq('id', similarProduct.id);
-          
-        createdProducts.push({ 
-          id: similarProduct.id, 
-          updated: true,
-          name: product.detection.name 
-        });
-      } else {
-        // Create new product
-        const productId = uuidv4();
-        const { error } = await supabase
-          .from('products')
-          .insert({
-            id: productId,
-            seller_id: livestream.seller_id,
-            name: product.detection.name || 'Product from livestream',
-            description: product.detection.description || `Product showcased during livestream on ${new Date().toLocaleDateString()}`,
-            images: [
-              product.processedImageUrl,
-              ...(product.variants?.map(v => v.imageUrl) || [])
-            ],
-            category: product.detection.category || 'Other',
-            price: product.detection.suggestedPrice || 0,
-            compare_at_price: (product.detection.suggestedPrice || 0) * 1.5, // 50% markup for comparison
-            stock: 50, // Default stock for livestream products
-            status: 'active',
-            source: 'livestream',
-            source_metadata: {
-              livestream_id: data.livestreamId,
-              capture_timestamp: data.timestamp,
-              confidence: product.detection.confidence,
-              platform: data.metadata?.platform,
-              detection: product.detection,
-              metadata
-            },
-            tags: [
-              'livestream',
-              product.detection.category?.toLowerCase(),
-              data.metadata?.platform,
-              ...(product.detection.tags || []),
-              ...(metadata.hashTags || [])
-            ].filter(Boolean)
-          });
+    const { data: createdProduct, error: insertError } = await supabase
+      .from('products')
+      .insert([productToInsert])
+      .select()
+      .single()
 
-        if (!error) {
-          createdProducts.push({ 
-            id: productId, 
-            created: true,
-            name: product.detection.name,
-            price: product.detection.suggestedPrice
-          });
-        }
-      }
+    if (insertError) {
+      console.error('Product insert error:', insertError)
+      throw insertError
     }
 
     // Update livestream stats
-    if (createdProducts.length > 0) {
-      await supabase.rpc('increment_livestream_products', {
-        p_livestream_id: data.livestreamId,
-        p_count: createdProducts.filter(p => p.created).length
-      });
+    const { error: updateError } = await supabase
+      .from('livestreams')
+      .update({
+        products_captured: livestream.products_captured + 1,
+      })
+      .eq('id', livestreamId)
+
+    if (updateError) {
+      console.error('Livestream update error:', updateError)
     }
 
-    // Update viewer count if provided
-    if (data.metadata?.viewerCount) {
-      await supabase
-        .from('livestreams')
-        .update({ viewer_count: data.metadata.viewerCount })
-        .eq('id', data.livestreamId);
-    }
+    // Track analytics
+    await supabase
+      .from('analytics_events')
+      .insert({
+        user_id: user.id,
+        event_type: 'product_captured',
+        event_data: {
+          livestreamId,
+          productId: createdProduct.id,
+          category: detection.category,
+          confidence: detection.confidence,
+          processingType: 'client-side-v2',
+          imageSize: metadata.size,
+          imageFormat: metadata.format
+        }
+      })
 
     return NextResponse.json({
-      captured: true,
-      products: createdProducts,
-      message: `Captured ${createdProducts.length} product(s) from livestream`
-    });
+      productsDetected: 1,
+      product: {
+        id: createdProduct.id,
+        name: createdProduct.name,
+        description: createdProduct.description,
+        price: createdProduct.price,
+        images: JSON.parse(createdProduct.images),
+        category: createdProduct.category,
+        confidence: detection.confidence,
+        aiDetection: detection,
+        processingType: 'client-side-v2'
+      },
+      message: 'Product successfully added to catalog'
+    })
   } catch (error) {
-    console.error('Capture error:', error);
+    console.error('Failed to process capture:', error)
     return NextResponse.json(
       { error: 'Failed to process capture' },
       { status: 500 }
-    );
+    )
   }
 }
 
-// GET endpoint to retrieve captured products for a livestream
+// GET endpoint to retrieve processed products for a livestream
 export async function GET(request: NextRequest) {
   try {
-    const livestreamId = request.nextUrl.searchParams.get('livestreamId');
-    
-    if (!livestreamId) {
-      return NextResponse.json(
-        { error: 'Livestream ID required' },
-        { status: 400 }
-      );
+    const user = await getCurrentUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: products } = await supabase
+    const { searchParams } = new URL(request.url)
+    const livestreamId = searchParams.get('livestreamId')
+
+    if (!livestreamId) {
+      return NextResponse.json(
+        { error: 'Missing livestreamId parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Verify livestream belongs to user
+    const { data: livestream } = await supabase
+      .from('livestreams')
+      .select('id')
+      .eq('id', livestreamId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!livestream) {
+      return NextResponse.json(
+        { error: 'Livestream not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get all products from this livestream
+    const { data: products, error } = await supabase
       .from('products')
-      .select('id, name, price, images, created_at')
+      .select('*')
+      .eq('seller_id', user.id)
       .eq('source', 'livestream')
-      .eq('source_metadata->>livestream_id', livestreamId)
-      .order('created_at', { ascending: false });
+      .contains('source_metadata', { livestreamId })
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json({
-      livestreamId,
-      productCount: products?.length || 0,
-      products: products || []
-    });
+      products: products.map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        images: JSON.parse(product.images),
+        category: product.category,
+        createdAt: product.created_at,
+        metadata: JSON.parse(product.source_metadata)
+      })),
+      total: products.length
+    })
   } catch (error) {
-    console.error('Get products error:', error);
+    console.error('Failed to get products:', error)
     return NextResponse.json(
-      { error: 'Failed to retrieve products' },
+      { error: 'Failed to get products' },
       { status: 500 }
-    );
+    )
   }
 }

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 // Get chat analytics for sellers
@@ -36,16 +36,19 @@ export async function GET(request: NextRequest) {
       .eq('seller_id', sellerId)
       .eq('status', 'active')
 
+    // Get chat IDs for this seller
+    const { data: sellerChats } = await supabase
+      .from('chats')
+      .select('id')
+      .eq('seller_id', sellerId)
+
+    const chatIds = sellerChats?.map(chat => chat.id) || []
+
     // Get messages statistics
     const { data: messages } = await supabase
       .from('messages')
       .select('id, sender_id, created_at')
-      .in('chat_id', 
-        supabase
-          .from('chats')
-          .select('id')
-          .eq('seller_id', sellerId)
-      )
+      .in('chat_id', chatIds)
       .gte('created_at', startDate)
       .lte('created_at', endDate)
 
@@ -62,7 +65,16 @@ export async function GET(request: NextRequest) {
       })
       .single()
 
-    const avgResponseTime = responseTimes?.avg_response_time || 0
+    const avgResponseTime = (responseTimes as any)?.avg_response_time || 0
+
+    // Get messages with sell commands
+    const { data: sellCommandMessages } = await supabase
+      .from('messages')
+      .select('metadata')
+      .in('chat_id', chatIds)
+      .not('metadata->sellCommand', 'is', null)
+
+    const sessionIds = sellCommandMessages?.map(msg => msg.metadata?.sellCommand?.sessionId).filter(Boolean) || []
 
     // Get conversion metrics
     const { data: conversions } = await supabase
@@ -71,14 +83,9 @@ export async function GET(request: NextRequest) {
       .eq('seller_id', sellerId)
       .gte('created_at', startDate)
       .lte('created_at', endDate)
-      .in('id',
-        supabase
-          .from('messages')
-          .select('metadata->sellCommand->sessionId')
-          .not('metadata->sellCommand', 'is', null)
-      )
+      .in('id', sessionIds.length > 0 ? sessionIds : [''])
 
-    const conversionRate = totalChats > 0 ? (conversions?.length || 0) / totalChats * 100 : 0
+    const conversionRate = (totalChats || 0) > 0 ? (conversions?.length || 0) / (totalChats || 1) * 100 : 0
     const totalRevenue = conversions?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
 
     // Get chat distribution by hour
@@ -108,7 +115,7 @@ export async function GET(request: NextRequest) {
       if (chat.product_id && chat.product) {
         if (!productCounts[chat.product_id]) {
           productCounts[chat.product_id] = {
-            name: chat.product.name,
+            name: (chat.product as any).name,
             count: 0
           }
         }

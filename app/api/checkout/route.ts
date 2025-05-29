@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 // Create checkout session
@@ -60,9 +60,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Add shipping cost
-    const shippingCost = 70; // Fixed shipping cost as per requirements
-    const total = subtotal + shippingCost;
+    // Get shipping info from request or use default
+    const shippingCost = body.shippingCharge || 70;
+    const codCharge = body.codCharge || 0;
+    const total = subtotal + shippingCost + codCharge;
 
     // Create checkout session
     const sessionId = uuidv4();
@@ -75,9 +76,12 @@ export async function POST(request: NextRequest) {
         items: verifiedItems,
         subtotal,
         shipping_cost: shippingCost,
+        cod_charge: codCharge,
         total,
         payment_method: paymentMethod,
         seller_id: sellerId,
+        shipping_zone: body.shippingZone,
+        estimated_delivery: body.estimatedDelivery,
         status: 'pending',
         expires_at: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
       })
@@ -258,7 +262,8 @@ export async function PUT(request: NextRequest) {
         shipping_address: session.shipping_address,
         items: session.items,
         subtotal: session.subtotal,
-        shipping_cost: session.shipping_cost,
+        shipping_charge: session.shipping_cost,
+        cod_charge: session.cod_charge || 0,
         total: session.total,
         payment_method: session.payment_method,
         payment_status: paymentStatus,

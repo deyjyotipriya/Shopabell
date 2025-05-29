@@ -57,7 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Try to refresh token to get user info
           const response = await authAPI.refreshToken();
           if (response.user) {
-            setUser(response.user);
+            const authUser = response.user;
+            const user: User = {
+              id: authUser.id,
+              phone: authUser.phone,
+              name: authUser.name,
+              email: authUser.email,
+              role: authUser.role || 'buyer',
+              isOnboarded: authUser.isOnboarded
+            };
+            setUser(user);
           }
         }
       } catch (error) {
@@ -80,15 +89,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await authAPI.verifyOTP(phone, otp);
       
       if (response.user) {
-        setUser(response.user);
+        const authUser = response.user;
+        // Convert AuthUser to User format with required role
+        const user: User = {
+          id: authUser.id,
+          phone: authUser.phone,
+          name: authUser.name,
+          email: authUser.email,
+          role: authUser.role || 'buyer', // Default to buyer if no role
+          isOnboarded: authUser.isOnboarded
+        };
+        
+        setUser(user);
         
         // Redirect based on role
-        if (response.user.role === 'master') {
+        if (user.role === 'master') {
           router.push('/master');
-        } else if (response.user.role === 'admin') {
+        } else if (user.role === 'admin') {
           router.push('/admin');
-        } else if (response.user.role === 'seller') {
-          if (response.user.isOnboarded) {
+        } else if (user.role === 'seller') {
+          if (user.isOnboarded) {
             router.push('/dashboard');
           } else {
             router.push('/seller/onboard');
@@ -129,7 +149,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await authAPI.refreshToken();
       if (response.user) {
-        setUser(response.user);
+        const authUser = response.user;
+        const user: User = {
+          id: authUser.id,
+          phone: authUser.phone,
+          name: authUser.name,
+          email: authUser.email,
+          role: authUser.role || 'buyer',
+          isOnboarded: authUser.isOnboarded
+        };
+        setUser(user);
       }
     } catch (error) {
       console.error('Auth refresh error:', error);

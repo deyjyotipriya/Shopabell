@@ -1,44 +1,72 @@
 'use client'
 
-import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallback } from 'react'
 import html2canvas from 'html2canvas'
+import { getLivestreamProcessor } from '@/app/lib/livestream-processor'
+import { ProcessedImage } from '@/app/lib/client-image-processor'
 
 interface LivestreamCaptureHandle {
   captureScreenshot: () => Promise<string | null>
+  startAutoCapture: (livestreamId: string, intervalSeconds?: number) => Promise<void>
+  stopAutoCapture: () => void
+  getProcessedImages: () => Promise<ProcessedImage[]>
 }
 
-const LivestreamCapture = forwardRef<LivestreamCaptureHandle>((props, ref) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+interface LivestreamCaptureProps {
+  onImageProcessed?: (image: ProcessedImage, timestamp: number) => void
+  captureElement?: HTMLElement | null
+}
 
-  useImperativeHandle(ref, () => ({
-    captureScreenshot: async () => {
+const LivestreamCapture = forwardRef<LivestreamCaptureHandle, LivestreamCaptureProps>(
+  ({ onImageProcessed, captureElement }, ref) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const processorRef = useRef(getLivestreamProcessor())
+    const [currentLivestreamId, setCurrentLivestreamId] = useState<string | null>(null)
+
+    useEffect(() => {
+      const processor = processorRef.current
+
+      // Listen for processed images
+      const handleProcessed = (event: CustomEvent) => {
+        if (onImageProcessed && event.detail.livestreamId === currentLivestreamId) {
+          onImageProcessed(event.detail.image, event.detail.timestamp)
+        }
+      }
+
+      window.addEventListener('livestream-image-processed', handleProcessed as EventListener)
+
+      return () => {
+        window.removeEventListener('livestream-image-processed', handleProcessed as EventListener)
+        processor.dispose()
+      }
+    }, [onImageProcessed, currentLivestreamId])
+
+    const captureScreenshot = useCallback(async () => {
       try {
-        // Simulate screenshot capture
-        // In a real implementation, this would capture the actual screen
-        // For now, we'll create a mock screenshot
+        // Determine what to capture
+        const targetElement = captureElement || document.body
         
-        // Option 1: Capture entire body (excluding the widget itself)
+        // Hide the widget temporarily
         const widget = document.querySelector('.fixed.bottom-4.right-4')
         if (widget) {
           (widget as HTMLElement).style.display = 'none'
         }
 
-        const canvas = await html2canvas(document.body, {
+        const canvas = await html2canvas(targetElement, {
           useCORS: true,
           allowTaint: true,
-          scale: 0.5, // Reduce size for performance
           logging: false,
           backgroundColor: null,
-          windowWidth: window.innerWidth,
-          windowHeight: window.innerHeight,
-        })
+          windowWidth: targetElement.scrollWidth,
+          windowHeight: targetElement.scrollHeight,
+        } as any)
 
         if (widget) {
           (widget as HTMLElement).style.display = ''
         }
 
         // Convert to base64
-        const screenshot = canvas.toDataURL('image/jpeg', 0.8)
+        const screenshot = canvas.toDataURL('image/jpeg', 0.9)
         return screenshot
 
       } catch (error) {
@@ -47,8 +75,30 @@ const LivestreamCapture = forwardRef<LivestreamCaptureHandle>((props, ref) => {
         // Return a mock screenshot for development
         return createMockScreenshot()
       }
-    }
-  }))
+    }, [captureElement])
+
+    useImperativeHandle(ref, () => ({
+      captureScreenshot,
+      
+      startAutoCapture: async (livestreamId: string, intervalSeconds = 5) => {
+        setCurrentLivestreamId(livestreamId)
+        const processor = processorRef.current
+        const element = captureElement || document.body
+        await processor.startCapture(livestreamId, element, intervalSeconds)
+      },
+      
+      stopAutoCapture: () => {
+        const processor = processorRef.current
+        processor.stopCapture()
+        setCurrentLivestreamId(null)
+      },
+      
+      getProcessedImages: async () => {
+        if (!currentLivestreamId) return []
+        const processor = processorRef.current
+        return processor.exportProcessedImages(currentLivestreamId)
+      }
+    }))
 
   const createMockScreenshot = (): string => {
     // Create a mock screenshot for development/testing
