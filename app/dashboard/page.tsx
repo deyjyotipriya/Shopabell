@@ -53,25 +53,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Total Revenue"
-          value="$31,200"
-          change={12.5}
+          value="₹1,25,600"
+          change={18.5}
           icon={<BiDollar className="w-6 h-6" />}
         />
         <MetricCard
           title="Total Orders"
-          value="248"
-          change={8.2}
+          value="342"
+          change={12.8}
           icon={<BiCart className="w-6 h-6" />}
         />
         <MetricCard
           title="Active Products"
-          value="142"
-          change={-2.4}
+          value="48"
+          change={6.2}
           icon={<BiPackage className="w-6 h-6" />}
         />
         <MetricCard
           title="Total Customers"
-          value="1,892"
+          value="287"
           change={15.3}
           icon={<BiGroup className="w-6 h-6" />}
         />

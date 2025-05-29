@@ -13,10 +13,13 @@ const routeConfig = {
     '/dashboard', // TEMPORARY: Make dashboard public to test if middleware is the issue
     '/admin', // TEMPORARY: Make admin public to test if middleware is the issue  
     '/master', // TEMPORARY: Make master public to test if middleware is the issue
+    '/chat', // TEMPORARY: Make chat public for demo
     '/api/auth/send-otp',
     '/api/auth/verify-otp',
     '/api/emulated',
     '/api/webhooks',
+    '/api/demo',
+    '/api/store',
   ],
   
   // Role-based protected routes
