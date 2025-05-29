@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { BiDollar, BiPackage, BiCart, BiGroup } from 'react-icons/bi';
 import MetricCard from '@/app/components/dashboard/MetricCard';
 import RevenueChart from '@/app/components/dashboard/RevenueChart';
@@ -5,13 +8,45 @@ import OrdersTable from '@/app/components/dashboard/OrdersTable';
 import LivestreamStats from '@/app/components/dashboard/LivestreamStats';
 import QuickActions from '@/app/components/dashboard/QuickActions';
 
+interface SellerInfo {
+  businessName: string;
+  category: string;
+  upiId: string;
+  phone: string;
+  storeUrl: string;
+}
+
 export default function DashboardPage() {
+  const [sellerInfo, setSellerInfo] = useState<SellerInfo | null>(null);
+
+  useEffect(() => {
+    // Load seller info from localStorage
+    const storedSellerInfo = localStorage.getItem('sellerInfo');
+    if (storedSellerInfo) {
+      try {
+        setSellerInfo(JSON.parse(storedSellerInfo));
+      } catch (error) {
+        console.error('Error parsing seller info:', error);
+      }
+    }
+  }, []);
+
+  const businessName = sellerInfo?.businessName || 'Your Business';
+  const firstName = businessName.split(' ')[0];
+
   return (
     <div className="p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, John!</h1>
-        <p className="text-gray-600 mt-2">Here's what's happening with your store today.</p>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {firstName}!</h1>
+        <p className="text-gray-600 mt-2">Here's what's happening with {businessName} today.</p>
+        {sellerInfo && (
+          <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
+            <span>📦 {sellerInfo.category}</span>
+            <span>💳 {sellerInfo.upiId}</span>
+            <span>🔗 {sellerInfo.storeUrl}</span>
+          </div>
+        )}
       </div>
 
       {/* Metrics Grid */}

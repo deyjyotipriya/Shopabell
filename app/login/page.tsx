@@ -132,12 +132,33 @@ export default function LoginPage() {
         const onboardingData = localStorage.getItem('onboardingData')
         if (onboardingData) {
           try {
-            const { businessName, category, upiId } = JSON.parse(onboardingData)
-            console.log('Processing onboarding data:', { businessName, category, upiId })
+            const { businessName, category, upiId, phone: onboardPhone } = JSON.parse(onboardingData)
+            console.log('Processing onboarding data:', { businessName, category, upiId, onboardPhone })
             
-            // For demo, just remove the onboarding data for now
+            // Send onboarding data to backend
+            const onboardResponse = await fetch('/api/seller/onboard', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: data.user.id,
+                businessName,
+                category,
+                upiId,
+                phone: onboardPhone || phone
+              })
+            })
+            
+            if (onboardResponse.ok) {
+              const onboardResult = await onboardResponse.json()
+              console.log('Seller onboarded successfully:', onboardResult)
+              
+              // Store the seller info for the dashboard
+              localStorage.setItem('sellerInfo', JSON.stringify(onboardResult.seller))
+            }
+            
+            // Remove onboarding data after processing
             localStorage.removeItem('onboardingData')
-            console.log('Onboarding data removed')
+            console.log('Onboarding data processed and removed')
           } catch (onboardError) {
             console.error('Onboarding error:', onboardError)
           }

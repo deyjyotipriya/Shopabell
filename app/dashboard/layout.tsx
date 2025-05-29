@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -37,6 +37,14 @@ const bottomNavigation: NavItem[] = [
   { name: 'Settings', href: '/dashboard/settings', icon: <BiCog className="w-5 h-5" /> },
 ];
 
+interface SellerInfo {
+  businessName: string;
+  category: string;
+  upiId: string;
+  phone: string;
+  storeUrl: string;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -44,8 +52,23 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sellerInfo, setSellerInfo] = useState<SellerInfo | null>(null);
+
+  useEffect(() => {
+    // Load seller info from localStorage
+    const storedSellerInfo = localStorage.getItem('sellerInfo');
+    if (storedSellerInfo) {
+      try {
+        setSellerInfo(JSON.parse(storedSellerInfo));
+      } catch (error) {
+        console.error('Error parsing seller info:', error);
+      }
+    }
+  }, []);
 
   const isActive = (href: string) => pathname === href;
+  const businessName = sellerInfo?.businessName || 'Your Business';
+  const userInitials = businessName.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -76,11 +99,11 @@ export default function DashboardLayout({
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-lg">
-                JD
+                {userInitials}
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">John Doe</h3>
-                <p className="text-sm text-gray-500">Premium Seller</p>
+                <h3 className="font-semibold text-gray-900">{businessName}</h3>
+                <p className="text-sm text-gray-500">{sellerInfo?.category || 'Premium Seller'}</p>
               </div>
             </div>
           </div>
