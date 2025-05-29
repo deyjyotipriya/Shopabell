@@ -13,7 +13,9 @@ import {
   BiCog,
   BiLogOut,
   BiMenu,
-  BiX
+  BiX,
+  BiCart,
+  BiMessageSquare
 } from 'react-icons/bi';
 import { HiSpeakerphone } from 'react-icons/hi';
 
@@ -25,10 +27,10 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: <BiHome className="w-5 h-5" /> },
+  { name: 'Orders', href: '/dashboard/orders', icon: <BiCart className="w-5 h-5" /> },
+  { name: 'Chats', href: '/dashboard/chats', icon: <BiMessageSquare className="w-5 h-5" /> },
   { name: 'Products', href: '/dashboard/products', icon: <BiPackage className="w-5 h-5" /> },
-  { name: 'Livestreams', href: '/dashboard/livestreams', icon: <BiVideo className="w-5 h-5" /> },
   { name: 'Analytics', href: '/dashboard/analytics', icon: <BiChart className="w-5 h-5" /> },
-  { name: 'Campaigns', href: '/dashboard/campaigns', icon: <HiSpeakerphone className="w-5 h-5" /> },
   { name: 'Store', href: '/dashboard/store', icon: <BiStore className="w-5 h-5" /> },
 ];
 
