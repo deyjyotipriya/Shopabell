@@ -168,7 +168,7 @@ export function verifyToken(token: string): JWTPayload | null {
   }
 }
 
-// Extract token from request
+// Extract token from request (works in both middleware and API routes)
 export function extractToken(request: NextRequest): string | null {
   // Check Authorization header
   const authHeader = request.headers.get('authorization');
@@ -176,9 +176,8 @@ export function extractToken(request: NextRequest): string | null {
     return authHeader.substring(7);
   }
   
-  // Check cookies
-  const cookieStore = cookies();
-  const token = cookieStore.get('access_token')?.value;
+  // Check cookies - use request.cookies for middleware compatibility
+  const token = request.cookies.get('access_token')?.value;
   
   return token || null;
 }

@@ -39,7 +39,10 @@ export function middleware(request: NextRequest) {
   
   // Extract and verify token
   const token = extractToken(request);
+  console.log('MIDDLEWARE DEBUG:', { path, hasToken: !!token, tokenStart: token?.substring(0, 20) });
+  
   if (!token) {
+    console.log('MIDDLEWARE: No token found, redirecting to login');
     // API routes return 401
     if (path.startsWith('/api/')) {
       return NextResponse.json(
@@ -56,6 +59,8 @@ export function middleware(request: NextRequest) {
   
   // Verify token
   const payload = verifyToken(token);
+  console.log('MIDDLEWARE: Token verification result:', { valid: !!payload, role: payload?.role });
+  
   if (!payload) {
     // Token invalid or expired
     if (path.startsWith('/api/')) {
