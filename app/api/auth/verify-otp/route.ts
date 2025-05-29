@@ -8,12 +8,19 @@ interface VerifyOTPRequest {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('=== VERIFY OTP ENDPOINT CALLED ===');
+  
   try {
+    console.log('1. Parsing request body...');
     const body: VerifyOTPRequest = await request.json();
+    console.log('Request body:', body);
+    
     const { phone, otp, userType = 'buyer' } = body;
 
+    console.log('2. Validating input...');
     // Validate input
     if (!phone || typeof phone !== 'string') {
+      console.log('Phone validation failed');
       return NextResponse.json(
         { error: 'Phone number is required' },
         { status: 400 }
@@ -21,12 +28,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!otp || typeof otp !== 'string') {
+      console.log('OTP validation failed');
       return NextResponse.json(
         { error: 'OTP is required' },
         { status: 400 }
       );
     }
 
+    console.log('3. Verifying OTP...');
     // Verify OTP
     console.log(`Verifying OTP for phone: ${phone}, otp: ${otp}`);
     const isValid = verifyOTP(phone, otp);
@@ -40,66 +49,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create or update user
-    const user = await createOrUpdateUser(phone, userType);
-    console.log('User created/found:', user);
-    
-    // Determine user role (simplified)
-    let role = 'buyer';
-    let isOnboarded = false;
-    
-    // Check for admin/master roles (based on phone number)
-    if (phone === '9999999999' || phone === '+919999999999') {
-      role = 'admin';
-    } else if (phone === '8888888888' || phone === '+918888888888') {
-      role = 'master';
-    } else if (userType === 'seller' || user.type === 'seller') {
-      role = 'seller';
-      // For now, assume not onboarded
-      isOnboarded = false;
-    }
+    console.log('4. OTP verified successfully');
 
-    // Generate simple tokens
-    const accessToken = generateAccessToken({
-      userId: user.id,
-      phone: user.phone,
-      userType: role as any
-    });
-    
-    const refreshToken = generateRefreshToken({
-      userId: user.id,
-      phone: user.phone,
-      userType: role as any
-    });
-
-    // Return user data and tokens
+    // For demo - return simple success without database operations
+    console.log('5. Returning demo response...');
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        phone: user.phone,
-        name: user.name,
-        email: user.email,
-        role,
-        isOnboarded,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        id: 'demo-user-id',
+        phone: phone,
+        name: 'Demo User',
+        email: null,
+        role: phone === '9999999999' ? 'admin' : 'seller',
+        isOnboarded: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       tokens: {
-        accessToken,
-        refreshToken,
-        expiresIn: 900 // 15 minutes
+        accessToken: 'demo-access-token',
+        refreshToken: 'demo-refresh-token',
+        expiresIn: 900
       }
     });
 
   } catch (error: any) {
-    console.error('Verify OTP error:', error);
-    console.error('Error stack:', error.stack);
+    console.error('=== VERIFY OTP ERROR ===');
+    console.error('Error:', error);
     console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     return NextResponse.json(
       { 
         error: 'Failed to verify OTP',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },
       { status: 500 }
     );
