@@ -67,11 +67,11 @@ export default function Home() {
                 Try Demo Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
-              <a href="https://wa.me/919876543210?text=Hi,%20I%20want%20to%20start%20selling%20on%20ShopAbell" 
+              <Link href="/whatsapp-onboard" 
                  className="btn-secondary flex items-center">
                 <MessageCircle className="mr-2 h-5 w-5" />
                 Start on WhatsApp
-              </a>
+              </Link>
             </div>
             <div className="mt-12 grid grid-cols-3 gap-8 max-w-lg mx-auto">
               <div className="text-center">
@@ -545,11 +545,11 @@ export default function Home() {
               Try Demo Dashboard
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
-            <a href="https://wa.me/919876543210?text=Hi,%20I%20want%20to%20start%20selling%20on%20ShopAbell" 
+            <Link href="/whatsapp-onboard" 
                className="bg-purple-700 hover:bg-purple-800 text-white px-8 py-4 rounded-lg font-medium transition flex items-center">
               <MessageCircle className="mr-2 h-5 w-5" />
               Start on WhatsApp
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -588,7 +588,7 @@ export default function Home() {
               <ul className="space-y-2 text-sm">
                 <li><Link href="#" className="hover:text-purple-400 transition">Help Center</Link></li>
                 <li><Link href="#" className="hover:text-purple-400 transition">Contact</Link></li>
-                <li><a href="https://wa.me/919876543210" className="hover:text-purple-400 transition">WhatsApp</a></li>
+                <li><Link href="/whatsapp-onboard" className="hover:text-purple-400 transition">WhatsApp</Link></li>
               </ul>
             </div>
           </div>
