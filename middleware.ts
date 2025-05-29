@@ -28,24 +28,15 @@ const routeConfig = {
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   
-  console.log('MIDDLEWARE: Processing path:', path);
-  
   // Check if route is public
   const isPublicRoute = routeConfig.public.some(route => 
     path === route || path.startsWith(`${route}/`)
   );
   
-  console.log('MIDDLEWARE: Is public route:', isPublicRoute);
-  
   if (isPublicRoute) {
     return NextResponse.next();
   }
   
-  // TEMPORARY: Allow all routes to debug redirect issue
-  console.log('MIDDLEWARE: Allowing all routes temporarily for debugging');
-  return NextResponse.next();
-  
-  /* COMMENTED OUT FOR DEBUGGING - UNCOMMENT AFTER FIXING REDIRECT ISSUE
   // Extract and verify token
   const token = extractToken(request);
   if (!token) {
@@ -63,7 +54,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
   
-  // Verify token (token is guaranteed to be non-null here)
+  // Verify token
   const payload = verifyToken(token);
   if (!payload) {
     // Token invalid or expired
@@ -132,7 +123,6 @@ export function middleware(request: NextRequest) {
       headers: requestHeaders,
     },
   });
-  */
 }
 
 // Configure which routes the middleware should run on

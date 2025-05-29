@@ -150,21 +150,13 @@ export default function LoginPage() {
         console.log('Redirecting user with role:', data.user.role)
         
         setTimeout(() => {
-          console.log('REDIRECT: Current URL before redirect:', window.location.href)
-          console.log('REDIRECT: User role:', data.user.role)
-          
           if (data.user.role === 'admin') {
-            console.log('REDIRECT: Redirecting to /admin')
             window.location.href = '/admin'
           } else if (data.user.role === 'seller') {
-            console.log('REDIRECT: Redirecting to /dashboard') 
             window.location.href = '/dashboard'
           } else {
-            console.log('REDIRECT: Redirecting to /')
             window.location.href = '/'
           }
-          
-          console.log('REDIRECT: window.location.href set, waiting for redirect...')
         }, 1000)
         
       } else {
