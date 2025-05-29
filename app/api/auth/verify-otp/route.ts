@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyOTP, createOrUpdateUser, generateAccessToken, generateRefreshToken } from '@/app/lib/auth';
+import { verifyOTP } from '@/app/lib/auth';
+import { generateTokens } from '@/app/lib/auth-service';
+import type { User } from '@/app/lib/auth-service';
 
 interface VerifyOTPRequest {
   phone: string;
@@ -51,25 +53,38 @@ export async function POST(request: NextRequest) {
 
     console.log('4. OTP verified successfully');
 
-    // For demo - return simple success without database operations
-    console.log('5. Returning demo response...');
+    // For demo - create a demo user and generate proper JWT tokens
+    console.log('5. Creating demo user and generating tokens...');
+    
+    const demoUser: User = {
+      id: 'demo-user-id',
+      phone: phone,
+      name: 'Demo User',
+      email: undefined,
+      role: phone === '9999999999' ? 'admin' : 'seller',
+      status: 'active',
+      permissions: [], // Will be set by generateTokens based on role
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Generate proper JWT tokens for middleware compatibility
+    const tokens = generateTokens(demoUser);
+    console.log('Generated tokens:', { accessToken: tokens.accessToken.substring(0, 20) + '...', expiresIn: tokens.expiresIn });
+    
     return NextResponse.json({
       success: true,
       user: {
-        id: 'demo-user-id',
-        phone: phone,
-        name: 'Demo User',
-        email: null,
-        role: phone === '9999999999' ? 'admin' : 'seller',
+        id: demoUser.id,
+        phone: demoUser.phone,
+        name: demoUser.name,
+        email: demoUser.email,
+        role: demoUser.role,
         isOnboarded: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: demoUser.createdAt,
+        updatedAt: demoUser.updatedAt
       },
-      tokens: {
-        accessToken: 'demo-access-token',
-        refreshToken: 'demo-refresh-token',
-        expiresIn: 900
-      }
+      tokens
     });
 
   } catch (error: any) {

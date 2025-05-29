@@ -9,6 +9,7 @@ const routeConfig = {
     '/',
     '/login',
     '/store',
+    '/whatsapp-onboard',
     '/api/auth/send-otp',
     '/api/auth/verify-otp',
     '/api/emulated',

@@ -117,11 +117,15 @@ export default function LoginPage() {
       if (data.success && data.user) {
         console.log('Login successful! Processing...')
         
-        // Store tokens
+        // Store tokens in localStorage and set cookie for middleware
         if (data.tokens) {
           localStorage.setItem('accessToken', data.tokens.accessToken)
           localStorage.setItem('refreshToken', data.tokens.refreshToken)
-          console.log('Tokens stored')
+          
+          // Set authentication cookie for middleware
+          document.cookie = `access_token=${data.tokens.accessToken}; path=/; max-age=${data.tokens.expiresIn || 900}; SameSite=Lax`
+          
+          console.log('Tokens stored and cookie set')
         }
 
         // Handle onboarding data
