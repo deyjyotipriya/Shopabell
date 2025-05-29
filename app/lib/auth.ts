@@ -105,23 +105,35 @@ export async function getCurrentUser(request: NextRequest): Promise<User | null>
 }
 
 export async function createOrUpdateUser(phone: string, type: 'seller' | 'buyer' = 'buyer'): Promise<User> {
-  let user = await getUserByPhone(phone);
+  console.log('createOrUpdateUser called with:', phone, type);
   
-  if (!user) {
-    const dbUser = await createUser(phone, undefined, type);
-    user = {
-      id: dbUser.id,
-      phone: dbUser.phone,
-      name: dbUser.name || undefined,
-      email: dbUser.email || undefined,
-      type: dbUser.type,
-      status: dbUser.status,
-      createdAt: new Date(dbUser.created_at),
-      updatedAt: new Date(dbUser.updated_at),
-    };
+  try {
+    let user = await getUserByPhone(phone);
+    console.log('getUserByPhone result:', user);
+    
+    if (!user) {
+      console.log('Creating new user...');
+      const dbUser = await createUser(phone, undefined, type);
+      console.log('Created user:', dbUser);
+      
+      user = {
+        id: dbUser.id,
+        phone: dbUser.phone,
+        name: dbUser.name || undefined,
+        email: dbUser.email || undefined,
+        type: dbUser.type,
+        status: dbUser.status,
+        createdAt: new Date(dbUser.created_at),
+        updatedAt: new Date(dbUser.updated_at),
+      };
+    }
+    
+    console.log('Final user object:', user);
+    return user;
+  } catch (error) {
+    console.error('Error in createOrUpdateUser:', error);
+    throw error;
   }
-  
-  return user;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
