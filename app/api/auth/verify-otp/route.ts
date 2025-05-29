@@ -51,18 +51,15 @@ export async function POST(request: NextRequest) {
     let role: UserRole = 'buyer';
     let isOnboarded = false;
     
-    // Check if user is a seller
-    if (userType === 'seller' || user.type === 'seller') {
+    // Check for admin/master roles (based on phone number for now)
+    if (phone === '9999999999' || phone === '+919999999999') {
+      role = 'admin';
+    } else if (phone === '8888888888' || phone === '+918888888888') {
+      role = 'master';
+    } else if (userType === 'seller' || user.type === 'seller') {
       role = 'seller';
       const seller = await getSeller(user.id);
       isOnboarded = !!seller;
-    }
-    
-    // Check for admin/master roles (based on phone number for now)
-    if (phone === '+919999999999') {
-      role = 'master';
-    } else if (phone.endsWith('0000')) {
-      role = 'admin';
     }
 
     // Create auth user object

@@ -93,7 +93,7 @@ export default function LoginPage() {
       if (response.ok) {
         // Handle new user onboarding
         const onboardingData = localStorage.getItem('onboardingData')
-        if (onboardingData && data.user.isNewUser) {
+        if (onboardingData && !data.user.isOnboarded && data.user.role === 'seller') {
           const { businessName, category, upiId } = JSON.parse(onboardingData)
           
           // Create seller profile
@@ -101,7 +101,7 @@ export default function LoginPage() {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${data.token}`
+              'Authorization': `Bearer ${data.tokens.accessToken}`
             },
             body: JSON.stringify({
               businessName,
@@ -115,12 +115,12 @@ export default function LoginPage() {
         }
 
         // Login successful
-        await login(data.user, data.token)
+        await login(data.user, data.tokens.accessToken)
         
-        // Redirect based on user type
-        if (data.user.type === 'admin') {
+        // Redirect based on user role
+        if (data.user.role === 'admin') {
           router.push('/admin')
-        } else if (data.user.type === 'seller') {
+        } else if (data.user.role === 'seller') {
           router.push('/dashboard')
         } else {
           router.push('/')
