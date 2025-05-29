@@ -49,22 +49,32 @@ export default function LoginPage() {
     setError('')
 
     try {
+      console.log('Sending OTP request to:', '/api/auth/send-otp')
+      console.log('Phone:', phoneToUse)
+      
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneToUse })
       })
 
-      const data = await response.json()
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
 
-      if (response.ok) {
-        setShowOtp(true)
-        setSuccessMessage('OTP sent! Use 123456 for demo.')
-      } else {
-        setError(data.error || 'Failed to send OTP')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.log('Error response:', errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
-    } catch (err) {
-      setError('Network error. Please try again.')
+
+      const data = await response.json()
+      console.log('Response data:', data)
+
+      setShowOtp(true)
+      setSuccessMessage('OTP sent! Use 123456 for demo.')
+    } catch (err: any) {
+      console.error('Send OTP error:', err)
+      setError(`Network error: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -82,41 +92,78 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Handle new user onboarding data before login
-      const onboardingData = localStorage.getItem('onboardingData')
+      console.log('Verifying OTP request to:', '/api/auth/verify-otp')
+      console.log('Phone:', phone, 'OTP:', otp)
       
-      // Use AuthContext login function which handles everything
-      await login(phone, otp)
-      
-      // Handle seller onboarding after successful login if needed
-      if (onboardingData) {
-        try {
-          const { businessName, category, upiId } = JSON.parse(onboardingData)
-          
-          // Create seller profile
-          await fetch('/api/seller/onboard', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            },
-            body: JSON.stringify({
-              businessName,
-              category,
-              upiId
-            })
-          })
-          
-          localStorage.removeItem('onboardingData')
-        } catch (onboardError) {
-          console.error('Onboarding error:', onboardError)
-          // Don't fail login if onboarding fails
-        }
+      // Direct API call instead of using AuthContext for debugging
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp })
+      })
+
+      console.log('Verify response status:', response.status)
+      console.log('Verify response ok:', response.ok)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.log('Verify error response:', errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
-      
-      // AuthContext will handle redirect automatically
+
+      const data = await response.json()
+      console.log('Verify response data:', data)
+
+      if (data.success && data.user) {
+        // Store tokens
+        if (data.tokens) {
+          localStorage.setItem('accessToken', data.tokens.accessToken)
+          localStorage.setItem('refreshToken', data.tokens.refreshToken)
+        }
+
+        // Handle onboarding data
+        const onboardingData = localStorage.getItem('onboardingData')
+        if (onboardingData) {
+          try {
+            const { businessName, category, upiId } = JSON.parse(onboardingData)
+            console.log('Processing onboarding data:', { businessName, category, upiId })
+            
+            // Create seller profile
+            await fetch('/api/seller/onboard', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.tokens.accessToken}`
+              },
+              body: JSON.stringify({
+                businessName,
+                category,
+                upiId,
+                userId: data.user.id
+              })
+            })
+            
+            localStorage.removeItem('onboardingData')
+          } catch (onboardError) {
+            console.error('Onboarding error:', onboardError)
+          }
+        }
+
+        // Redirect based on user role
+        console.log('User role:', data.user.role)
+        if (data.user.role === 'admin') {
+          router.push('/admin')
+        } else if (data.user.role === 'seller') {
+          router.push('/dashboard')
+        } else {
+          router.push('/')
+        }
+      } else {
+        setError('Login failed')
+      }
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP')
+      console.error('Verify OTP error:', err)
+      setError(`Network error: ${err.message}`)
     } finally {
       setLoading(false)
     }
