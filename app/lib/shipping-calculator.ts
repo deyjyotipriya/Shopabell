@@ -122,7 +122,7 @@ export function calculateShipping(
   const totalCharge = baseCharge + weightCharge + codCharge;
   
   // Check for free shipping eligibility
-  const freeShippingEligible = zone.freeShippingAbove && orderValue >= zone.freeShippingAbove;
+  const freeShippingEligible = !!(zone.freeShippingAbove && orderValue >= zone.freeShippingAbove);
   const discount = freeShippingEligible ? (baseCharge + weightCharge) : 0; // COD charge is never discounted
   const finalCharge = totalCharge - discount;
   
