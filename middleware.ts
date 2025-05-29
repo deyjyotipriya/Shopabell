@@ -45,6 +45,7 @@ export function middleware(request: NextRequest) {
   console.log('MIDDLEWARE: Allowing all routes temporarily for debugging');
   return NextResponse.next();
   
+  /* COMMENTED OUT FOR DEBUGGING - UNCOMMENT AFTER FIXING REDIRECT ISSUE
   // Extract and verify token
   const token = extractToken(request);
   if (!token) {
@@ -62,7 +63,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
   
-  // Verify token
+  // Verify token (token is guaranteed to be non-null here)
   const payload = verifyToken(token);
   if (!payload) {
     // Token invalid or expired
@@ -131,6 +132,7 @@ export function middleware(request: NextRequest) {
       headers: requestHeaders,
     },
   });
+  */
 }
 
 // Configure which routes the middleware should run on
