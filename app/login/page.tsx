@@ -115,10 +115,13 @@ export default function LoginPage() {
       console.log('Verify response data:', data)
 
       if (data.success && data.user) {
+        console.log('Login successful! Processing...')
+        
         // Store tokens
         if (data.tokens) {
           localStorage.setItem('accessToken', data.tokens.accessToken)
           localStorage.setItem('refreshToken', data.tokens.refreshToken)
+          console.log('Tokens stored')
         }
 
         // Handle onboarding data
@@ -128,38 +131,35 @@ export default function LoginPage() {
             const { businessName, category, upiId } = JSON.parse(onboardingData)
             console.log('Processing onboarding data:', { businessName, category, upiId })
             
-            // Create seller profile
-            await fetch('/api/seller/onboard', {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${data.tokens.accessToken}`
-              },
-              body: JSON.stringify({
-                businessName,
-                category,
-                upiId,
-                userId: data.user.id
-              })
-            })
-            
+            // For demo, just remove the onboarding data for now
             localStorage.removeItem('onboardingData')
+            console.log('Onboarding data removed')
           } catch (onboardError) {
             console.error('Onboarding error:', onboardError)
           }
         }
 
+        // Show success message briefly before redirect
+        setSuccessMessage('✅ Login successful! Redirecting...')
+        
         // Redirect based on user role
-        console.log('User role:', data.user.role)
-        if (data.user.role === 'admin') {
-          router.push('/admin')
-        } else if (data.user.role === 'seller') {
-          router.push('/dashboard')
-        } else {
-          router.push('/')
-        }
+        console.log('Redirecting user with role:', data.user.role)
+        
+        setTimeout(() => {
+          if (data.user.role === 'admin') {
+            console.log('Redirecting to /admin')
+            window.location.href = '/admin'
+          } else if (data.user.role === 'seller') {
+            console.log('Redirecting to /dashboard')
+            window.location.href = '/dashboard'
+          } else {
+            console.log('Redirecting to /')
+            window.location.href = '/'
+          }
+        }, 1000)
+        
       } else {
-        setError('Login failed')
+        setError('Login failed - invalid response')
       }
     } catch (err: any) {
       console.error('Verify OTP error:', err)
