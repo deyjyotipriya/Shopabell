@@ -38,24 +38,35 @@ export function storeOTP(phone: string, otp: string): void {
 }
 
 export function verifyOTP(phone: string, otp: string): boolean {
+  console.log(`Auth lib - verifyOTP called with phone: ${phone}, otp: ${otp}`);
+  
   // Demo OTP for testing
   if (otp === '123456') {
+    console.log('Demo OTP accepted');
     return true;
   }
   
   const stored = otpStore.get(phone);
-  if (!stored) return false;
+  console.log('Stored OTP data:', stored);
+  
+  if (!stored) {
+    console.log('No stored OTP found');
+    return false;
+  }
   
   if (Date.now() > stored.expiresAt) {
+    console.log('OTP expired');
     otpStore.delete(phone);
     return false;
   }
   
   if (stored.otp === otp) {
+    console.log('OTP matched');
     otpStore.delete(phone);
     return true;
   }
   
+  console.log('OTP did not match');
   return false;
 }
 

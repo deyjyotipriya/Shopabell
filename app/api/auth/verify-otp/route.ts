@@ -35,9 +35,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify OTP
+    console.log(`Verifying OTP for phone: ${phone}, otp: ${otp}`);
     const isValid = verifyOTP(phone, otp);
+    console.log(`OTP verification result: ${isValid}`);
     
     if (!isValid) {
+      console.log('OTP verification failed');
       return NextResponse.json(
         { error: 'Invalid or expired OTP' },
         { status: 401 }

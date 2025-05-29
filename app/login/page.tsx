@@ -82,18 +82,15 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Handle new user onboarding
-        const onboardingData = localStorage.getItem('onboardingData')
-        if (onboardingData && !data.user.isOnboarded && data.user.role === 'seller') {
+      // Handle new user onboarding data before login
+      const onboardingData = localStorage.getItem('onboardingData')
+      
+      // Use AuthContext login function which handles everything
+      await login(phone, otp)
+      
+      // Handle seller onboarding after successful login if needed
+      if (onboardingData) {
+        try {
           const { businessName, category, upiId } = JSON.parse(onboardingData)
           
           // Create seller profile
@@ -101,35 +98,25 @@ export default function LoginPage() {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${data.tokens.accessToken}`
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
             },
             body: JSON.stringify({
               businessName,
               category,
-              upiId,
-              userId: data.user.id
+              upiId
             })
           })
           
           localStorage.removeItem('onboardingData')
+        } catch (onboardError) {
+          console.error('Onboarding error:', onboardError)
+          // Don't fail login if onboarding fails
         }
-
-        // Login successful
-        await login(data.user, data.tokens.accessToken)
-        
-        // Redirect based on user role
-        if (data.user.role === 'admin') {
-          router.push('/admin')
-        } else if (data.user.role === 'seller') {
-          router.push('/dashboard')
-        } else {
-          router.push('/')
-        }
-      } else {
-        setError(data.error || 'Invalid OTP')
       }
-    } catch (err) {
-      setError('Network error. Please try again.')
+      
+      // AuthContext will handle redirect automatically
+    } catch (err: any) {
+      setError(err.message || 'Invalid OTP')
     } finally {
       setLoading(false)
     }
