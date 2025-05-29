@@ -227,7 +227,10 @@ export default function WhatsAppOnboard() {
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Type a message"
             className="flex-1 px-4 py-2 bg-white rounded-full border border-gray-300 focus:outline-none focus:border-[#128C7E]"
+            style={{ direction: 'ltr', textAlign: 'left' }}
             disabled={onboardingStep === 4}
+            autoComplete="off"
+            spellCheck="false"
           />
           <button
             onClick={handleSend}

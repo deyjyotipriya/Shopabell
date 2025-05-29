@@ -215,9 +215,13 @@ export default function LoginPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Enter your phone number"
                       className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}
                       maxLength={10}
                       pattern="[0-9]{10}"
                       required
+                      autoComplete="off"
+                      spellCheck="false"
+                      inputMode="numeric"
                     />
                     <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
                       +91
@@ -247,10 +251,14 @@ export default function LoginPage() {
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                     placeholder="Enter 6-digit OTP"
                     className="w-full px-4 py-3 text-center text-lg tracking-wider border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}
                     maxLength={6}
                     pattern="[0-9]{6}"
                     required
                     autoFocus
+                    autoComplete="off"
+                    spellCheck="false"
+                    inputMode="numeric"
                   />
                   <p className="text-sm text-gray-500 mt-2">
                     Didn't receive OTP? 
