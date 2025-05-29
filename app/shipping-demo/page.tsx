@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { calculateShipping, ShippingCalculation } from '@/lib/shipping-calculator'
+import { calculateShipping, ShippingCalculation } from '@/app/lib/shipping-calculator'
 
 export default function ShippingDemo() {
   const [pincode, setPincode] = useState('')

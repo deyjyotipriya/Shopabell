@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { CheckoutSession } from '@/app/types'
-import { ShippingCalculation } from '@/lib/shipping-calculator'
+import { ShippingCalculation } from '@/app/lib/shipping-calculator'
 
 interface CheckoutFormProps {
   session: CheckoutSession
