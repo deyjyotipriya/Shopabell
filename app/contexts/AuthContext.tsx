@@ -49,25 +49,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return requiredRoles.includes(user.role);
   }, [user]);
 
-  // Initialize auth state
+  // Initialize auth state - simplified for demo
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (authAPI.isAuthenticated()) {
-          // Try to refresh token to get user info
-          const response = await authAPI.refreshToken();
-          if (response.user) {
-            const authUser = response.user;
-            const user: User = {
-              id: authUser.id,
-              phone: authUser.phone,
-              name: authUser.name,
-              email: authUser.email,
-              role: authUser.role || 'buyer',
-              isOnboarded: authUser.isOnboarded
-            };
-            setUser(user);
-          }
+        // For demo, just check if we have a token in localStorage
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          // Create a demo user based on stored data
+          const demoUser: User = {
+            id: 'demo-user-id',
+            phone: '9876543210',
+            name: 'Demo User',
+            role: 'seller',
+            isOnboarded: false
+          };
+          setUser(demoUser);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -167,58 +164,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Auto-refresh token before expiry
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  // Auto-refresh token before expiry - disabled for demo
+  // useEffect(() => {
+  //   if (!isAuthenticated) return;
+  //   const interval = setInterval(() => {
+  //     refreshAuth().catch(() => logout());
+  //   }, 10 * 60 * 1000);
+  //   return () => clearInterval(interval);
+  // }, [isAuthenticated]);
 
-    // Refresh token every 10 minutes (access token expires in 15 min)
-    const interval = setInterval(() => {
-      refreshAuth().catch(() => {
-        // If refresh fails, logout
-        logout();
-      });
-    }, 10 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
-
-  // Route protection
-  useEffect(() => {
-    if (loading) return;
-
-    const protectedRoutes = {
-      seller: ['/dashboard', '/products', '/orders', '/livestream'],
-      buyer: ['/checkout', '/orders'],
-      admin: ['/admin'],
-      master: ['/master'],
-    };
-
-    // Check if current route requires authentication
-    const requiresAuth = Object.values(protectedRoutes).flat().some(route => 
-      pathname.startsWith(route)
-    );
-
-    if (requiresAuth && !isAuthenticated) {
-      router.push(`/login?from=${encodeURIComponent(pathname)}`);
-      return;
-    }
-
-    // Check role-based access
-    if (isAuthenticated && user) {
-      for (const [role, routes] of Object.entries(protectedRoutes)) {
-        if (routes.some(route => pathname.startsWith(route))) {
-          if (!canAccess([role as UserRole])) {
-            // Redirect to appropriate dashboard
-            const redirectUrl = user.role === 'admin' ? '/admin' :
-                              user.role === 'master' ? '/master' :
-                              user.role === 'seller' ? '/dashboard' : '/';
-            router.push(redirectUrl);
-            return;
-          }
-        }
-      }
-    }
-  }, [pathname, loading, isAuthenticated, user, router, canAccess]);
+  // Route protection - disabled, handled by middleware
+  // useEffect(() => {
+  //   // Route protection logic moved to middleware
+  // }, [pathname, loading, isAuthenticated, user, router, canAccess]);
 
   return (
     <AuthContext.Provider
