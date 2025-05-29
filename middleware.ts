@@ -11,6 +11,8 @@ const routeConfig = {
     '/store',
     '/whatsapp-onboard',
     '/dashboard', // TEMPORARY: Make dashboard public to test if middleware is the issue
+    '/admin', // TEMPORARY: Make admin public to test if middleware is the issue  
+    '/master', // TEMPORARY: Make master public to test if middleware is the issue
     '/api/auth/send-otp',
     '/api/auth/verify-otp',
     '/api/emulated',
